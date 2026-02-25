@@ -33,6 +33,13 @@ app.add_middleware(
 def root():
     return {"message": "FinMind API is running"}
 
+# -------------------- TEMPORARY DEBUG ENDPOINT (Remove after use!) --------------------
+@app.get("/debug-users")
+def debug_users(db: Session = Depends(get_db)):
+    users = db.query(models.User).all()
+    return [{"id": u.id, "email": u.email, "full_name": u.full_name} for u in users]
+# ------------------------------------------------------------------------------------
+
 # -------------------- Authentication Endpoints --------------------
 @app.post("/register", response_model=schemas.User)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
