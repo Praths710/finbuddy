@@ -9,7 +9,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   // Replace with your actual Render backend URL
-  const API_BASE = 'https://your-backend.onrender.com';
+  const API_BASE = 'https://finbuddy-api-86cc.onrender.com';
 
   useEffect(() => {
     if (token) {
