@@ -138,7 +138,7 @@ const themeStyles = `
   }
 `;
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = 'https://finbuddy-api-86cc.onrender.com';
 
 function App() {
   const [transactions, setTransactions] = useState([]);
