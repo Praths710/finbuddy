@@ -1,6 +1,29 @@
-﻿from pydantic import BaseModel
+﻿from pydantic import BaseModel, EmailStr
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
+
+# User schemas
+class UserBase(BaseModel):
+    email: EmailStr
+    full_name: Optional[str] = None
+
+class UserCreate(UserBase):
+    password: str
+
+class User(UserBase):
+    id: int
+    is_active: int
+
+    class Config:
+        orm_mode = True
+
+# Token schemas
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    email: Optional[str] = None
 
 # Category schemas
 class CategoryBase(BaseModel):
@@ -16,7 +39,7 @@ class Category(CategoryBase):
     class Config:
         orm_mode = True
 
-# Transaction schemas
+# Transaction schemas (include user_id in response but not required in create)
 class TransactionBase(BaseModel):
     amount: float
     description: str
@@ -30,6 +53,7 @@ class Transaction(TransactionBase):
     id: int
     date: datetime
     category: Optional[Category] = None
+    user_id: int
     
     class Config:
         orm_mode = True
@@ -48,6 +72,7 @@ class LoanCreate(LoanBase):
 class Loan(LoanBase):
     id: int
     start_date: datetime
+    user_id: int
     
     class Config:
         orm_mode = True

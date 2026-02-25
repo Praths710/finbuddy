@@ -3,6 +3,18 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
 
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
+    full_name = Column(String, nullable=True)
+    is_active = Column(Integer, default=1)
+
+    transactions = relationship("Transaction", back_populates="owner")
+    loans = relationship("Loan", back_populates="owner")
+
 class Category(Base):
     __tablename__ = "categories"
     
@@ -20,16 +32,20 @@ class Transaction(Base):
     description = Column(String, index=True)
     date = Column(DateTime, default=datetime.utcnow)
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
     
     category = relationship("Category", back_populates="transactions")
+    owner = relationship("User", back_populates="transactions")
 
-# New Loan model
 class Loan(Base):
     __tablename__ = "loans"
     
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)                # e.g., "Car Loan", "Home EMI"
-    amount = Column(Float)                            # monthly EMI amount
+    name = Column(String, index=True)
+    amount = Column(Float)
     start_date = Column(DateTime, default=datetime.utcnow)
-    end_date = Column(DateTime, nullable=True)        # when the loan ends
-    description = Column(String, nullable=True)       # optional notes
+    end_date = Column(DateTime, nullable=True)
+    description = Column(String, nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    
+    owner = relationship("User", back_populates="loans")
