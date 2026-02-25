@@ -14,9 +14,7 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-# -------------------- CORS CONFIGURATION --------------------
-# For testing only – allow all origins. After confirming registration works,
-# replace with your actual frontend URL(s).
+# CORS – allow all origins temporarily (lock down later)
 origins = ["*"]
 
 app.add_middleware(
@@ -26,32 +24,25 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# ------------------------------------------------------------
 
-# -------------------- Root Endpoint --------------------
 @app.get("/")
 def root():
     return {"message": "FinMind API is running"}
 
-# -------------------- TEMPORARY DEBUG ENDPOINT (Remove after use!) --------------------
+# -------------------- TEMPORARY DEBUG ENDPOINT --------------------
 @app.get("/debug-users")
 def debug_users(db: Session = Depends(get_db)):
     users = db.query(models.User).all()
     return [{"id": u.id, "email": u.email, "full_name": u.full_name} for u in users]
-# ------------------------------------------------------------------------------------
+# ----------------------------------------------------------------
 
-# -------------------- Authentication Endpoints --------------------
 @app.post("/register", response_model=schemas.User)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    # Check if email already exists
     db_user = db.query(models.User).filter(models.User.email == user.email).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
-    
-    # Validate password length (bcrypt limit: 72 bytes)
     if len(user.password) > 72:
         raise HTTPException(status_code=400, detail="Password too long (max 72 characters)")
-    
     hashed_password = auth.get_password_hash(user.password)
     db_user = models.User(
         email=user.email,
@@ -65,6 +56,9 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 @app.post("/token", response_model=schemas.Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    # Add password length check to avoid bcrypt error
+    if len(form_data.password) > 72:
+        raise HTTPException(status_code=400, detail="Password too long (max 72 characters)")
     user = auth.authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
@@ -82,7 +76,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 def read_users_me(current_user: schemas.User = Depends(auth.get_current_active_user)):
     return current_user
 
-# -------------------- Category Endpoints (public) --------------------
+# Category endpoints (unchanged)
 @app.post("/categories/", response_model=schemas.Category)
 def create_category(category: schemas.CategoryCreate, db: Session = Depends(get_db)):
     db_category = models.Category(name=category.name, description=category.description)
@@ -96,7 +90,7 @@ def read_categories(skip: int = 0, limit: int = 100, db: Session = Depends(get_d
     categories = db.query(models.Category).offset(skip).limit(limit).all()
     return categories
 
-# -------------------- Transaction Endpoints (protected) --------------------
+# Transaction endpoints (protected)
 @app.post("/transactions/", response_model=schemas.Transaction)
 def create_transaction(
     transaction: schemas.TransactionCreate,
@@ -149,15 +143,13 @@ def update_transaction(
         .first()
     if not transaction:
         raise HTTPException(status_code=404, detail="Transaction not found")
-    
     for key, value in transaction_update.dict().items():
         setattr(transaction, key, value)
-    
     db.commit()
     db.refresh(transaction)
     return transaction
 
-# -------------------- Category suggestion endpoint (public) --------------------
+# Category suggestion
 @app.get("/suggest-category/")
 def suggest_category_endpoint(description: str):
     cat_name = suggest_category(description)
@@ -169,7 +161,7 @@ def suggest_category_endpoint(description: str):
             return {"suggested_category_id": cat.id, "suggested_category_name": cat.name}
     return {"suggested_category_id": None, "suggested_category_name": None}
 
-# -------------------- Loan Endpoints (protected) --------------------
+# Loan endpoints (protected)
 @app.post("/loans/", response_model=schemas.Loan)
 def create_loan(
     loan: schemas.LoanCreate,
@@ -207,10 +199,8 @@ def update_loan(
         .first()
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
-    
     for key, value in loan_update.dict().items():
         setattr(loan, key, value)
-    
     db.commit()
     db.refresh(loan)
     return loan
@@ -230,7 +220,6 @@ def delete_loan(
     db.commit()
     return {"message": "Loan deleted successfully"}
 
-# -------------------- Startup event to create default categories --------------------
 @app.on_event("startup")
 def startup_event():
     db = SessionLocal()
