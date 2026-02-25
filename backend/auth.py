@@ -1,4 +1,3 @@
-import os
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
@@ -8,11 +7,9 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 import schemas
 import models
-from database import get_db
+from database import get_db, SessionLocal   # <-- CHANGED
 
-# to get a string like this run:
-# openssl rand -hex 32
-SECRET_KEY = os.getenv("SECRET_KEY", "fallback-for-dev-only")
+SECRET_KEY = "your-secret-key-here-change-in-production"  # Use env var in production
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
