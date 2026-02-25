@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Container, Row, Col, Card, Form, Button, Tabs, Tab, Modal, ProgressBar, Navbar } from 'react-bootstrap';
