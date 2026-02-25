@@ -28,6 +28,11 @@ app.add_middleware(
 )
 # ------------------------------------------------------------
 
+# -------------------- Root Endpoint --------------------
+@app.get("/")
+def root():
+    return {"message": "FinMind API is running"}
+
 # -------------------- Authentication Endpoints --------------------
 @app.post("/register", response_model=schemas.User)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
