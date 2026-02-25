@@ -1,7 +1,3 @@
-from database import get_db, SessionLocal, engine
-from fastapi import FastAPI, Depends, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
@@ -11,18 +7,18 @@ from typing import List
 import models
 import schemas
 import auth
-from database import SessionLocal, engine
+from database import get_db, SessionLocal, engine
 from categorizer import suggest_category
 
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-# CORS - add your frontend URL after deployment
-origins = [
-    "http://localhost:3000",
-    "https://your-frontend.vercel.app",  # replace with actual URL
-]
+# -------------------- CORS CONFIGURATION --------------------
+# For testing only – allow all origins. After confirming registration works,
+# replace with your actual frontend URL(s).
+origins = ["*"]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -30,14 +26,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Dependency
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+# ------------------------------------------------------------
 
 # -------------------- Authentication Endpoints --------------------
 @app.post("/register", response_model=schemas.User)
@@ -75,7 +64,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 def read_users_me(current_user: schemas.User = Depends(auth.get_current_active_user)):
     return current_user
 
-# -------------------- Category Endpoints (unchanged, public) --------------------
+# -------------------- Category Endpoints (public) --------------------
 @app.post("/categories/", response_model=schemas.Category)
 def create_category(category: schemas.CategoryCreate, db: Session = Depends(get_db)):
     db_category = models.Category(name=category.name, description=category.description)
@@ -223,7 +212,7 @@ def delete_loan(
     db.commit()
     return {"message": "Loan deleted successfully"}
 
-# -------------------- Startup event to create default categories (unchanged) --------------------
+# -------------------- Startup event to create default categories --------------------
 @app.on_event("startup")
 def startup_event():
     db = SessionLocal()
