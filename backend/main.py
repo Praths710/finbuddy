@@ -19,7 +19,7 @@ app = FastAPI()
 # You can add more origins if needed.
 origins = [
     "http://localhost:3000",
-    "https://your-frontend.vercel.app",   # <-- REPLACE THIS with your real frontend URL after deployment
+    "https://finbuddy-fawn.vercel.app",   # <-- REPLACE THIS with your real frontend URL after deployment
 ]
 
 app.add_middleware(
