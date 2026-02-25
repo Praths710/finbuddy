@@ -36,9 +36,15 @@ def root():
 # -------------------- Authentication Endpoints --------------------
 @app.post("/register", response_model=schemas.User)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    # Check if email already exists
     db_user = db.query(models.User).filter(models.User.email == user.email).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Validate password length (bcrypt limit: 72 bytes)
+    if len(user.password) > 72:
+        raise HTTPException(status_code=400, detail="Password too long (max 72 characters)")
+    
     hashed_password = auth.get_password_hash(user.password)
     db_user = models.User(
         email=user.email,
