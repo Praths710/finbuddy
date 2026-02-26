@@ -14,7 +14,7 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-# -------------------- CORS (temporary: allow all) --------------------
+# CORS – allow all origins temporarily (lock down after testing)
 origins = ["*"]
 
 app.add_middleware(
@@ -24,15 +24,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# ------------------------------------------------------------
 
 @app.get("/")
 def root():
     return {"message": "FinMind API is running"}
 
-# ==================== TEMPORARY DEBUG ENDPOINTS ====================
-# Use these to list and delete users. REMOVE after fixing the issue!
-
+# -------------------- TEMPORARY DEBUG ENDPOINTS --------------------
 @app.get("/debug-users")
 def debug_users(db: Session = Depends(get_db)):
     users = db.query(models.User).all()
@@ -46,17 +43,33 @@ def debug_delete_user(user_id: int, db: Session = Depends(get_db)):
     db.delete(user)
     db.commit()
     return {"message": f"User {user_id} deleted"}
-# ====================================================================
+# -------------------------------------------------------------------
 
-# -------------------- Authentication Endpoints --------------------
+def validate_password(password: str):
+    """Check password byte length <= 72 and raise HTTPException if not."""
+    if len(password.encode('utf-8')) > 72:
+        raise HTTPException(
+            status_code=400,
+            detail="Password too long (max 72 bytes when encoded). Try a shorter password."
+        )
+
 @app.post("/register", response_model=schemas.User)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    # Check if email already exists
     db_user = db.query(models.User).filter(models.User.email == user.email).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
-    if len(user.password) > 72:
-        raise HTTPException(status_code=400, detail="Password too long (max 72 characters)")
-    hashed_password = auth.get_password_hash(user.password)
+
+    # Validate password byte length
+    validate_password(user.password)
+
+    # Hash password with error handling
+    try:
+        hashed_password = auth.get_password_hash(user.password)
+    except Exception as e:
+        # Catch any bcrypt-related error (e.g., if password somehow still invalid)
+        raise HTTPException(status_code=400, detail=f"Password error: {str(e)}")
+
     db_user = models.User(
         email=user.email,
         hashed_password=hashed_password,
@@ -69,8 +82,9 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 @app.post("/token", response_model=schemas.Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    if len(form_data.password) > 72:
-        raise HTTPException(status_code=400, detail="Password too long (max 72 characters)")
+    # Validate password byte length before authentication
+    validate_password(form_data.password)
+
     user = auth.authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
@@ -232,7 +246,7 @@ def delete_loan(
     db.commit()
     return {"message": "Loan deleted successfully"}
 
-# -------------------- Startup event to create default categories --------------------
+# -------------------- Startup event --------------------
 @app.on_event("startup")
 def startup_event():
     db = SessionLocal()
