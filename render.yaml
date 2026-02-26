@@ -1,3 +1,9 @@
+databases:
+  - name: finbuddy-db
+    databaseName: finbuddy
+    user: finbuddy_user
+    plan: free
+
 services:
   - type: web
     name: finbuddy-api
