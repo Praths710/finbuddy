@@ -7,7 +7,7 @@ import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recha
 import { useAuth } from './AuthContext';
 import { useNavigate } from 'react-router-dom';
 
-const API_BASE = 'https://finbuddy-api-86cc.onrender.com'; // <-- REPLACE WITH YOUR LIVE BACKEND URL
+const API_BASE = 'https://finbuddy-api-docker.onrender.com'; // <-- REPLACE WITH YOUR LIVE BACKEND URL
 
 function Dashboard() {
   const { user, logout } = useAuth();
