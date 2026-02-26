@@ -14,7 +14,7 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-# CORS – allow all origins temporarily (lock down later)
+# -------------------- CORS (temporary: allow all) --------------------
 origins = ["*"]
 
 app.add_middleware(
@@ -24,18 +24,31 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# ------------------------------------------------------------
 
 @app.get("/")
 def root():
     return {"message": "FinMind API is running"}
 
-# -------------------- TEMPORARY DEBUG ENDPOINT --------------------
+# ==================== TEMPORARY DEBUG ENDPOINTS ====================
+# Use these to list and delete users. REMOVE after fixing the issue!
+
 @app.get("/debug-users")
 def debug_users(db: Session = Depends(get_db)):
     users = db.query(models.User).all()
     return [{"id": u.id, "email": u.email, "full_name": u.full_name} for u in users]
-# ----------------------------------------------------------------
 
+@app.delete("/debug-delete-user/{user_id}")
+def debug_delete_user(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    db.delete(user)
+    db.commit()
+    return {"message": f"User {user_id} deleted"}
+# ====================================================================
+
+# -------------------- Authentication Endpoints --------------------
 @app.post("/register", response_model=schemas.User)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = db.query(models.User).filter(models.User.email == user.email).first()
@@ -56,7 +69,6 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 @app.post("/token", response_model=schemas.Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    # Add password length check to avoid bcrypt error
     if len(form_data.password) > 72:
         raise HTTPException(status_code=400, detail="Password too long (max 72 characters)")
     user = auth.authenticate_user(db, form_data.username, form_data.password)
@@ -76,7 +88,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 def read_users_me(current_user: schemas.User = Depends(auth.get_current_active_user)):
     return current_user
 
-# Category endpoints (unchanged)
+# -------------------- Category Endpoints --------------------
 @app.post("/categories/", response_model=schemas.Category)
 def create_category(category: schemas.CategoryCreate, db: Session = Depends(get_db)):
     db_category = models.Category(name=category.name, description=category.description)
@@ -90,7 +102,7 @@ def read_categories(skip: int = 0, limit: int = 100, db: Session = Depends(get_d
     categories = db.query(models.Category).offset(skip).limit(limit).all()
     return categories
 
-# Transaction endpoints (protected)
+# -------------------- Transaction Endpoints (protected) --------------------
 @app.post("/transactions/", response_model=schemas.Transaction)
 def create_transaction(
     transaction: schemas.TransactionCreate,
@@ -149,7 +161,7 @@ def update_transaction(
     db.refresh(transaction)
     return transaction
 
-# Category suggestion
+# -------------------- Category suggestion endpoint --------------------
 @app.get("/suggest-category/")
 def suggest_category_endpoint(description: str):
     cat_name = suggest_category(description)
@@ -161,7 +173,7 @@ def suggest_category_endpoint(description: str):
             return {"suggested_category_id": cat.id, "suggested_category_name": cat.name}
     return {"suggested_category_id": None, "suggested_category_name": None}
 
-# Loan endpoints (protected)
+# -------------------- Loan Endpoints (protected) --------------------
 @app.post("/loans/", response_model=schemas.Loan)
 def create_loan(
     loan: schemas.LoanCreate,
@@ -220,6 +232,7 @@ def delete_loan(
     db.commit()
     return {"message": "Loan deleted successfully"}
 
+# -------------------- Startup event to create default categories --------------------
 @app.on_event("startup")
 def startup_event():
     db = SessionLocal()
