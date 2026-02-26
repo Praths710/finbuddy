@@ -51,6 +51,7 @@ function Register() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              maxLength="72"   // <-- Added to prevent long passwords
             />
           </Form.Group>
           <Button variant="primary" type="submit" className="w-100">

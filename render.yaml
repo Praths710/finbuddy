@@ -20,4 +20,4 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: PIP_ONLY_BINARY
-        value: ":all:"
+        value: ":all:"ss
