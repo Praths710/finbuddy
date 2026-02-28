@@ -14,49 +14,43 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-# -------------------- CORS CONFIGURATION --------------------
-# Allow your frontend and local development
+# -------------------- CORS CONFIGURATION (CRITICAL) --------------------
+# Your frontend URLs must be listed here exactly (no trailing slash)
 origins = [
     "http://localhost:3000",
-    "https://finbuddy-fawn.vercel.app",   # Your live frontend URL
+    "https://finbuddy-fawn.vercel.app",   # <-- your frontend URL
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_credentials=False,
+    allow_credentials=True,   # Required for cookies/authorization headers
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# ------------------------------------------------------------
+# ---------------------------------------------------------------------
 
 @app.get("/")
 def root():
     return {"message": "FinMind API is running"}
 
-# -------------------- TEMPORARY DEBUG ENDPOINTS (Remove after fixing) --------------------
-@app.get("/debug-users")
-def debug_users(db: Session = Depends(get_db)):
-    users = db.query(models.User).all()
-    return [{"id": u.id, "email": u.email, "full_name": u.full_name} for u in users]
+# -------------------- User Income Endpoints --------------------
+@app.get("/user/income", response_model=schemas.User)
+def get_user_income(current_user: models.User = Depends(auth.get_current_active_user)):
+    return current_user
 
-@app.delete("/debug-delete-user/{user_id}")
-def debug_delete_user(user_id: int, db: Session = Depends(get_db)):
-    user = db.query(models.User).filter(models.User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    db.delete(user)
+@app.put("/user/income", response_model=schemas.User)
+def update_income(
+    active: float = 0.0,
+    passive: float = 0.0,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    current_user.active_income = active
+    current_user.passive_income = passive
     db.commit()
-    return {"message": f"User {user_id} deleted"}
-# ---------------------------------------------------------------------------------------
-
-def validate_password(password: str):
-    """Check password byte length <= 72 and raise HTTPException if not."""
-    if len(password.encode('utf-8')) > 72:
-        raise HTTPException(
-            status_code=400,
-            detail="Password too long (max 72 bytes when encoded). Try a shorter password."
-        )
+    db.refresh(current_user)
+    return current_user
 
 # -------------------- Authentication Endpoints --------------------
 @app.post("/register", response_model=schemas.User)
@@ -64,18 +58,15 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = db.query(models.User).filter(models.User.email == user.email).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
-
-    validate_password(user.password)
-
-    try:
-        hashed_password = auth.get_password_hash(user.password)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Password error: {str(e)}")
-
+    if len(user.password.encode('utf-8')) > 72:
+        raise HTTPException(status_code=400, detail="Password too long (max 72 bytes)")
+    hashed_password = auth.get_password_hash(user.password)
     db_user = models.User(
         email=user.email,
         hashed_password=hashed_password,
-        full_name=user.full_name
+        full_name=user.full_name,
+        active_income=user.active_income,
+        passive_income=user.passive_income
     )
     db.add(db_user)
     db.commit()
@@ -84,8 +75,8 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 @app.post("/token", response_model=schemas.Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    validate_password(form_data.password)
-
+    if len(form_data.password.encode('utf-8')) > 72:
+        raise HTTPException(status_code=400, detail="Password too long (max 72 bytes)")
     user = auth.authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
