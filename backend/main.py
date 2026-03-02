@@ -9,13 +9,13 @@ import schemas
 import auth
 from database import get_db, SessionLocal, engine
 from categorizer import suggest_category
+from sqlalchemy import text  # Added for debug endpoint
 
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-# -------------------- CORS CONFIGURATION (CRITICAL) --------------------
-# Your frontend URLs must be listed here exactly (no trailing slash)
+# -------------------- CORS CONFIGURATION --------------------
 origins = [
     "http://localhost:3000",
     "https://finbuddy-fawn.vercel.app",   # <-- your frontend URL
@@ -24,15 +24,27 @@ origins = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_credentials=True,   # Required for cookies/authorization headers
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# ---------------------------------------------------------------------
+# ------------------------------------------------------------
 
 @app.get("/")
 def root():
     return {"message": "FinMind API is running"}
+
+# -------------------- DIAGNOSTIC ENDPOINT (REMOVE AFTER FIX) --------------------
+@app.get("/debug-db")
+def debug_db(db: Session = Depends(get_db)):
+    try:
+        # Attempt to insert a dummy transaction (will be rolled back)
+        db.execute(text("INSERT INTO transactions (amount, description, user_id) VALUES (1, 'test', 1);"))
+        db.rollback()
+        return {"status": "ok", "message": "Database schema looks correct"}
+    except Exception as e:
+        return {"error": str(e), "type": type(e).__name__}
+# ---------------------------------------------------------------------------------
 
 # -------------------- User Income Endpoints --------------------
 @app.get("/user/income", response_model=schemas.User)
