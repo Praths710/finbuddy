@@ -9,7 +9,7 @@ import schemas
 import auth
 from database import get_db, SessionLocal, engine
 from categorizer import suggest_category
-from sqlalchemy import text  # Added for debug endpoint
+from sqlalchemy import text  # Needed for raw SQL
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -34,16 +34,19 @@ app.add_middleware(
 def root():
     return {"message": "FinMind API is running"}
 
-# -------------------- DIAGNOSTIC ENDPOINT (REMOVE AFTER FIX) --------------------
-@app.get("/debug-db")
-def debug_db(db: Session = Depends(get_db)):
+# -------------------- FIX DATABASE ENDPOINT (REMOVE AFTER USE) --------------------
+@app.get("/fix-db")
+def fix_database(db: Session = Depends(get_db)):
     try:
-        # Attempt to insert a dummy transaction (will be rolled back)
-        db.execute(text("INSERT INTO transactions (amount, description, user_id) VALUES (1, 'test', 1);"))
-        db.rollback()
-        return {"status": "ok", "message": "Database schema looks correct"}
+        # Add user_id column to transactions if it doesn't exist
+        db.execute(text("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id);"))
+        # Add user_id column to loans if it doesn't exist
+        db.execute(text("ALTER TABLE loans ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id);"))
+        db.commit()
+        return {"message": "Database schema updated successfully. Added user_id columns."}
     except Exception as e:
-        return {"error": str(e), "type": type(e).__name__}
+        db.rollback()
+        return {"error": str(e)}
 # ---------------------------------------------------------------------------------
 
 # -------------------- User Income Endpoints --------------------
