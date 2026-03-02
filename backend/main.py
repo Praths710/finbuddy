@@ -9,7 +9,7 @@ import schemas
 import auth
 from database import get_db, SessionLocal, engine
 from categorizer import suggest_category
-from sqlalchemy import text  # Needed for raw SQL
+from sqlalchemy import text
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -18,7 +18,7 @@ app = FastAPI()
 # -------------------- CORS CONFIGURATION --------------------
 origins = [
     "http://localhost:3000",
-    "https://finbuddy-fawn.vercel.app",   # <-- your frontend URL
+    "https://finbuddy-fawn.vercel.app",   # your frontend URL
 ]
 
 app.add_middleware(
@@ -34,20 +34,37 @@ app.add_middleware(
 def root():
     return {"message": "FinMind API is running"}
 
-# -------------------- FIX DATABASE ENDPOINT (REMOVE AFTER USE) --------------------
+# -------------------- TEMPORARY USER MANAGEMENT ENDPOINTS --------------------
+# Use these to view and clean up duplicate emails. REMOVE after debugging!
+
+@app.get("/list-users")
+def list_users(db: Session = Depends(get_db)):
+    """List all registered users (id, email)."""
+    users = db.query(models.User).all()
+    return [{"id": u.id, "email": u.email} for u in users]
+
+@app.delete("/delete-user/{user_id}")
+def delete_user(user_id: int, db: Session = Depends(get_db)):
+    """Delete a user by ID. Use with caution – deletes all their data!"""
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    db.delete(user)
+    db.commit()
+    return {"message": f"User {user_id} deleted"}
+# ------------------------------------------------------------------------------
+
+# (Keep your existing /fix-db endpoint if you still need it, otherwise remove it)
 @app.get("/fix-db")
 def fix_database(db: Session = Depends(get_db)):
     try:
-        # Add user_id column to transactions if it doesn't exist
         db.execute(text("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id);"))
-        # Add user_id column to loans if it doesn't exist
         db.execute(text("ALTER TABLE loans ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id);"))
         db.commit()
         return {"message": "Database schema updated successfully. Added user_id columns."}
     except Exception as e:
         db.rollback()
         return {"error": str(e)}
-# ---------------------------------------------------------------------------------
 
 # -------------------- User Income Endpoints --------------------
 @app.get("/user/income", response_model=schemas.User)
@@ -70,9 +87,11 @@ def update_income(
 # -------------------- Authentication Endpoints --------------------
 @app.post("/register", response_model=schemas.User)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    # Check if email already exists
     db_user = db.query(models.User).filter(models.User.email == user.email).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
+    # Password length check (bcrypt limit: 72 bytes)
     if len(user.password.encode('utf-8')) > 72:
         raise HTTPException(status_code=400, detail="Password too long (max 72 bytes)")
     hashed_password = auth.get_password_hash(user.password)
