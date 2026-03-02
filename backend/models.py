@@ -11,6 +11,8 @@ class User(Base):
     hashed_password = Column(String)
     full_name = Column(String, nullable=True)
     is_active = Column(Integer, default=1)
+    active_income = Column(Float, default=0.0)   # <-- add this
+    passive_income = Column(Float, default=0.0)  # <-- add this
 
     transactions = relationship("Transaction", back_populates="owner")
     loans = relationship("Loan", back_populates="owner")
