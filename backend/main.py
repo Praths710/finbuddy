@@ -9,7 +9,7 @@ import schemas
 import auth
 from database import get_db, SessionLocal, engine
 from categorizer import suggest_category
-from sqlalchemy import text
+from sqlalchemy import text  # Required for raw SQL in /fix-db
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -18,7 +18,7 @@ app = FastAPI()
 # -------------------- CORS CONFIGURATION --------------------
 origins = [
     "http://localhost:3000",
-    "https://finbuddy-fawn.vercel.app",   # your frontend URL
+    "https://finbuddy-fawn.vercel.app",   # <-- your frontend URL
 ]
 
 app.add_middleware(
@@ -35,7 +35,7 @@ def root():
     return {"message": "FinMind API is running"}
 
 # -------------------- TEMPORARY USER MANAGEMENT ENDPOINTS --------------------
-# Use these to view and clean up duplicate emails. REMOVE after debugging!
+# Use these to list and delete users. REMOVE after debugging.
 
 @app.get("/list-users")
 def list_users(db: Session = Depends(get_db)):
@@ -54,17 +54,22 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
     return {"message": f"User {user_id} deleted"}
 # ------------------------------------------------------------------------------
 
-# (Keep your existing /fix-db endpoint if you still need it, otherwise remove it)
+# -------------------- FIX DATABASE ENDPOINT (Run once, then remove) --------------------
 @app.get("/fix-db")
 def fix_database(db: Session = Depends(get_db)):
     try:
+        # Add income columns to users table if missing
+        db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS active_income FLOAT DEFAULT 0.0;"))
+        db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS passive_income FLOAT DEFAULT 0.0;"))
+        # Ensure user_id columns exist in transactions and loans
         db.execute(text("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id);"))
         db.execute(text("ALTER TABLE loans ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id);"))
         db.commit()
-        return {"message": "Database schema updated successfully. Added user_id columns."}
+        return {"message": "Database schema updated successfully. Added income columns and user_id columns."}
     except Exception as e:
         db.rollback()
         return {"error": str(e)}
+# ---------------------------------------------------------------------------------------
 
 # -------------------- User Income Endpoints --------------------
 @app.get("/user/income", response_model=schemas.User)
