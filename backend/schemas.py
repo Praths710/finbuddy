@@ -2,10 +2,12 @@
 from datetime import datetime
 from typing import Optional, List
 
-# User schemas
+# -------------------- User schemas --------------------
 class UserBase(BaseModel):
     email: EmailStr
     full_name: Optional[str] = None
+    active_income: float = 0.0
+    passive_income: float = 0.0
 
 class UserCreate(UserBase):
     password: str
@@ -15,9 +17,9 @@ class User(UserBase):
     is_active: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
-# Token schemas
+# -------------------- Token schemas --------------------
 class Token(BaseModel):
     access_token: str
     token_type: str
@@ -25,7 +27,7 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     email: Optional[str] = None
 
-# Category schemas
+# -------------------- Category schemas --------------------
 class CategoryBase(BaseModel):
     name: str
     description: Optional[str] = None
@@ -37,9 +39,9 @@ class Category(CategoryBase):
     id: int
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
-# Transaction schemas (include user_id in response but not required in create)
+# -------------------- Transaction schemas --------------------
 class TransactionBase(BaseModel):
     amount: float
     description: str
@@ -56,9 +58,9 @@ class Transaction(TransactionBase):
     user_id: int
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
-# Loan schemas
+# -------------------- Loan schemas --------------------
 class LoanBase(BaseModel):
     name: str
     amount: float
@@ -75,4 +77,4 @@ class Loan(LoanBase):
     user_id: int
     
     class Config:
-        orm_mode = True
+        from_attributes = True
