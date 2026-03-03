@@ -11,20 +11,23 @@ class User(Base):
     hashed_password = Column(String)
     full_name = Column(String, nullable=True)
     is_active = Column(Integer, default=1)
-    active_income = Column(Float, default=0.0)   # <-- add this
-    passive_income = Column(Float, default=0.0)  # <-- add this
+    active_income = Column(Float, default=0.0)
+    passive_income = Column(Float, default=0.0)
 
     transactions = relationship("Transaction", back_populates="owner")
     loans = relationship("Loan", back_populates="owner")
+    categories = relationship("Category", back_populates="owner")  # added
 
 class Category(Base):
     __tablename__ = "categories"
     
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True, index=True)
+    name = Column(String, index=True)  # unique constraint removed (can be per‑user)
     description = Column(String, nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # NULL for global categories
     
     transactions = relationship("Transaction", back_populates="category")
+    owner = relationship("User", back_populates="categories")  # added
 
 class Transaction(Base):
     __tablename__ = "transactions"

@@ -33,10 +33,11 @@ class CategoryBase(BaseModel):
     description: Optional[str] = None
 
 class CategoryCreate(CategoryBase):
-    pass
+    pass  # user_id comes from current user
 
 class Category(CategoryBase):
     id: int
+    user_id: Optional[int] = None  # null for global categories
     
     class Config:
         from_attributes = True

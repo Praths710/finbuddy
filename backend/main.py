@@ -9,7 +9,7 @@ import schemas
 import auth
 from database import get_db, SessionLocal, engine
 from categorizer import suggest_category
-from sqlalchemy import text  # Required for raw SQL in /fix-db
+from sqlalchemy import text
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -18,7 +18,7 @@ app = FastAPI()
 # -------------------- CORS CONFIGURATION --------------------
 origins = [
     "http://localhost:3000",
-    "https://finbuddy-fawn.vercel.app",   # <-- your frontend URL
+    "https://finbuddy-fawn.vercel.app",   # your frontend URL
 ]
 
 app.add_middleware(
@@ -34,42 +34,47 @@ app.add_middleware(
 def root():
     return {"message": "FinMind API is running"}
 
-# -------------------- TEMPORARY USER MANAGEMENT ENDPOINTS --------------------
-# Use these to list and delete users. REMOVE after debugging.
-
+# -------------------- TEMPORARY USER MANAGEMENT ENDPOINTS (REMOVE AFTER USE) --------------------
 @app.get("/list-users")
 def list_users(db: Session = Depends(get_db)):
-    """List all registered users (id, email)."""
     users = db.query(models.User).all()
     return [{"id": u.id, "email": u.email} for u in users]
 
 @app.delete("/delete-user/{user_id}")
 def delete_user(user_id: int, db: Session = Depends(get_db)):
-    """Delete a user by ID. Use with caution – deletes all their data!"""
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     db.delete(user)
     db.commit()
     return {"message": f"User {user_id} deleted"}
-# ------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------
 
-# -------------------- FIX DATABASE ENDPOINT (Run once, then remove) --------------------
+# -------------------- DATABASE FIX ENDPOINTS (RUN ONCE, THEN REMOVE) --------------------
 @app.get("/fix-db")
 def fix_database(db: Session = Depends(get_db)):
     try:
-        # Add income columns to users table if missing
         db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS active_income FLOAT DEFAULT 0.0;"))
         db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS passive_income FLOAT DEFAULT 0.0;"))
-        # Ensure user_id columns exist in transactions and loans
         db.execute(text("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id);"))
         db.execute(text("ALTER TABLE loans ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id);"))
         db.commit()
-        return {"message": "Database schema updated successfully. Added income columns and user_id columns."}
+        return {"message": "Database schema updated: added income and user_id columns."}
     except Exception as e:
         db.rollback()
         return {"error": str(e)}
-# ---------------------------------------------------------------------------------------
+
+@app.get("/fix-db-categories")
+def fix_db_categories(db: Session = Depends(get_db)):
+    try:
+        # Add user_id column to categories if missing
+        db.execute(text("ALTER TABLE categories ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id);"))
+        db.commit()
+        return {"message": "Added user_id column to categories."}
+    except Exception as e:
+        db.rollback()
+        return {"error": str(e)}
+# -----------------------------------------------------------------------------------------
 
 # -------------------- User Income Endpoints --------------------
 @app.get("/user/income", response_model=schemas.User)
@@ -92,11 +97,9 @@ def update_income(
 # -------------------- Authentication Endpoints --------------------
 @app.post("/register", response_model=schemas.User)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    # Check if email already exists
     db_user = db.query(models.User).filter(models.User.email == user.email).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
-    # Password length check (bcrypt limit: 72 bytes)
     if len(user.password.encode('utf-8')) > 72:
         raise HTTPException(status_code=400, detail="Password too long (max 72 bytes)")
     hashed_password = auth.get_password_hash(user.password)
@@ -133,18 +136,37 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 def read_users_me(current_user: schemas.User = Depends(auth.get_current_active_user)):
     return current_user
 
-# -------------------- Category Endpoints --------------------
+# -------------------- Category Endpoints (protected) --------------------
 @app.post("/categories/", response_model=schemas.Category)
-def create_category(category: schemas.CategoryCreate, db: Session = Depends(get_db)):
-    db_category = models.Category(name=category.name, description=category.description)
+def create_category(
+    category: schemas.CategoryCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    db_category = models.Category(
+        name=category.name,
+        description=category.description,
+        user_id=current_user.id  # assign to current user
+    )
     db.add(db_category)
     db.commit()
     db.refresh(db_category)
     return db_category
 
 @app.get("/categories/", response_model=List[schemas.Category])
-def read_categories(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    categories = db.query(models.Category).offset(skip).limit(limit).all()
+def read_categories(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    # Return global categories (user_id IS NULL) and user's own categories
+    categories = db.query(models.Category)\
+        .filter(
+            (models.Category.user_id == current_user.id) | 
+            (models.Category.user_id == None)
+        )\
+        .offset(skip).limit(limit).all()
     return categories
 
 # -------------------- Transaction Endpoints (protected) --------------------
@@ -277,7 +299,7 @@ def delete_loan(
     db.commit()
     return {"message": "Loan deleted successfully"}
 
-# -------------------- Startup event to create default categories --------------------
+# -------------------- Startup event to create default global categories --------------------
 @app.on_event("startup")
 def startup_event():
     db = SessionLocal()
@@ -287,8 +309,12 @@ def startup_event():
         "Transfer", "Other"
     ]
     for cat_name in default_cats:
-        exists = db.query(models.Category).filter(models.Category.name == cat_name).first()
+        # Check if global category already exists (user_id is None)
+        exists = db.query(models.Category).filter(
+            models.Category.name == cat_name,
+            models.Category.user_id == None
+        ).first()
         if not exists:
-            db.add(models.Category(name=cat_name))
+            db.add(models.Category(name=cat_name, user_id=None))
     db.commit()
     db.close()

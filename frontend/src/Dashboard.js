@@ -151,6 +151,7 @@ function Dashboard() {
   const [activeIncome, setActiveIncome] = useState(0);
   const [passiveIncome, setPassiveIncome] = useState(0);
 
+  // Form states
   const [form, setForm] = useState({
     amount: '',
     description: '',
@@ -167,6 +168,10 @@ function Dashboard() {
   const [suggestedCat, setSuggestedCat] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editingLoanId, setEditingLoanId] = useState(null);
+
+  // New category form state
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryDesc, setNewCategoryDesc] = useState('');
 
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState('add');
@@ -204,6 +209,7 @@ function Dashboard() {
     fetchData();
   }, [user]);
 
+  // Income handlers
   const handleActiveChange = (value) => {
     setActiveIncome(value);
     axios.put(`${API_BASE}/user/income?active=${value}&passive=${passiveIncome}`)
@@ -216,6 +222,7 @@ function Dashboard() {
       .catch(err => console.error("Error updating passive income", err));
   };
 
+  // Transaction handlers
   const handleDescriptionChange = (e) => {
     const desc = e.target.value;
     setForm({ ...form, description: desc });
@@ -314,6 +321,7 @@ function Dashboard() {
     }
   };
 
+  // Loan handlers
   const handleLoanSubmit = (e) => {
     e.preventDefault();
     const loanData = {
@@ -374,11 +382,28 @@ function Dashboard() {
     }
   };
 
+  // New category handler
+  const handleAddCategory = (e) => {
+    e.preventDefault();
+    axios.post(`${API_BASE}/categories/`, {
+      name: newCategoryName,
+      description: newCategoryDesc
+    })
+      .then(() => {
+        // Refresh categories
+        axios.get(`${API_BASE}/categories/`).then(res => setCategories(res.data));
+        setNewCategoryName('');
+        setNewCategoryDesc('');
+      })
+      .catch(err => console.error("Error adding category", err));
+  };
+
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
+  // Calculations
   const otherIncome = transactions.reduce((acc, tx) => {
     if (tx.category && tx.category.name.toLowerCase().includes('income')) {
       acc += tx.amount;
@@ -449,6 +474,7 @@ function Dashboard() {
       </Navbar>
 
       <Container className="py-4" data-bs-theme="dark">
+        {/* Summary Cards */}
         <Row className="mb-4">
           <Col md={3}>
             <Card className="text-white bg-primary h-100">
@@ -489,6 +515,7 @@ function Dashboard() {
           </Col>
         </Row>
 
+        {/* Total Income & Net Row */}
         <Row className="mb-4">
           <Col md={6}>
             <Card className="text-white bg-secondary h-100">
@@ -514,6 +541,7 @@ function Dashboard() {
           </Col>
         </Row>
 
+        {/* Income Inputs */}
         <Row className="mb-4">
           <Col md={6}>
             <Card>
@@ -555,8 +583,32 @@ function Dashboard() {
           )}
         </Row>
 
+        {/* Tabs */}
         <Tabs defaultActiveKey="transactions" id="main-tabs" className="mb-3">
           <Tab eventKey="transactions" title="Transactions">
+            {/* Add Category Form */}
+            <Card className="mb-3">
+              <Card.Body>
+                <Card.Title>Add New Category</Card.Title>
+                <Form onSubmit={handleAddCategory} className="d-flex gap-2">
+                  <Form.Control
+                    type="text"
+                    placeholder="Category name"
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    required
+                  />
+                  <Form.Control
+                    type="text"
+                    placeholder="Description (optional)"
+                    value={newCategoryDesc}
+                    onChange={(e) => setNewCategoryDesc(e.target.value)}
+                  />
+                  <Button type="submit" variant="success">Add</Button>
+                </Form>
+              </Card.Body>
+            </Card>
+
             <Button
               variant="primary"
               onClick={() => {
@@ -718,6 +770,7 @@ function Dashboard() {
           </Tab>
         </Tabs>
 
+        {/* Transaction Modal */}
         <Modal show={showModal} onHide={() => setShowModal(false)}>
           <Modal.Header closeButton>
             <Modal.Title>{modalMode === 'add' ? 'Add Transaction' : 'Edit Transaction'}</Modal.Title>
