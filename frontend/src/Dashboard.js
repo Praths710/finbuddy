@@ -6,17 +6,23 @@ import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recha
 import { useAuth } from './AuthContext';
 import { useNavigate } from 'react-router-dom';
 
-// Replace with your live backend URL
-const API_BASE = 'https://finbuddy-api-python.onrender.com';
+const API_BASE = 'https://finbuddy-api-python.onrender.com'; // your backend URL
 
 function Dashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  // State for transactions, categories, loans
+  // State for data
   const [transactions, setTransactions] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loans, setLoans] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Income state (from backend)
+  const [activeIncome, setActiveIncome] = useState(0);
+  const [passiveIncome, setPassiveIncome] = useState(0);
+
+  // Form states
   const [form, setForm] = useState({
     amount: '',
     description: '',
@@ -34,44 +40,60 @@ function Dashboard() {
   const [editingId, setEditingId] = useState(null);
   const [editingLoanId, setEditingLoanId] = useState(null);
 
-  // Incomes (stored in localStorage for now)
-  const [activeIncome, setActiveIncome] = useState(() => {
-    const saved = localStorage.getItem('activeIncome');
-    return saved ? parseFloat(saved) : 0;
-  });
-  const [passiveIncome, setPassiveIncome] = useState(() => {
-    const saved = localStorage.getItem('passiveIncome');
-    return saved ? parseFloat(saved) : 0;
-  });
-
   // Modal state
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState('add');
 
-  // Persist incomes
+  // Fetch all data when user changes (login)
   useEffect(() => {
-    localStorage.setItem('activeIncome', activeIncome.toString());
-  }, [activeIncome]);
-  useEffect(() => {
-    localStorage.setItem('passiveIncome', passiveIncome.toString());
-  }, [passiveIncome]);
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
-  // Fetch data on mount
-  useEffect(() => {
-    axios.get(`${API_BASE}/categories/`).then(res => setCategories(res.data));
-    fetchTransactions();
-    fetchLoans();
-  }, []);
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // Fetch categories (public)
+        const catsRes = await axios.get(`${API_BASE}/categories/`);
+        setCategories(catsRes.data);
 
-  const fetchTransactions = () => {
-    axios.get(`${API_BASE}/transactions/`).then(res => setTransactions(res.data));
+        // Fetch income
+        const incomeRes = await axios.get(`${API_BASE}/user/income`);
+        setActiveIncome(incomeRes.data.active_income);
+        setPassiveIncome(incomeRes.data.passive_income);
+
+        // Fetch transactions and loans
+        const [txRes, loansRes] = await Promise.all([
+          axios.get(`${API_BASE}/transactions/`),
+          axios.get(`${API_BASE}/loans/`)
+        ]);
+        setTransactions(txRes.data);
+        setLoans(loansRes.data);
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [user]); // <-- crucial: re-run when user changes
+
+  // Update income handlers
+  const handleActiveChange = (value) => {
+    setActiveIncome(value);
+    axios.put(`${API_BASE}/user/income?active=${value}&passive=${passiveIncome}`)
+      .catch(err => console.error("Error updating active income", err));
   };
 
-  const fetchLoans = () => {
-    axios.get(`${API_BASE}/loans/`).then(res => setLoans(res.data));
+  const handlePassiveChange = (value) => {
+    setPassiveIncome(value);
+    axios.put(`${API_BASE}/user/income?active=${activeIncome}&passive=${value}`)
+      .catch(err => console.error("Error updating passive income", err));
   };
 
-  // Transaction handlers
+  // Transaction handlers (unchanged)
   const handleDescriptionChange = (e) => {
     const desc = e.target.value;
     setForm({ ...form, description: desc });
@@ -115,6 +137,18 @@ function Dashboard() {
         })
         .catch(err => console.error("Error creating transaction:", err));
     }
+  };
+
+  const fetchTransactions = () => {
+    axios.get(`${API_BASE}/transactions/`)
+      .then(res => setTransactions(res.data))
+      .catch(err => console.error("Error fetching transactions", err));
+  };
+
+  const fetchLoans = () => {
+    axios.get(`${API_BASE}/loans/`)
+      .then(res => setLoans(res.data))
+      .catch(err => console.error("Error fetching loans", err));
   };
 
   const resetForm = () => {
@@ -245,7 +279,7 @@ function Dashboard() {
   const net = totalIncome - totalExpenses;
   const spentPercent = totalIncome > 0 ? Math.min(100, (totalExpenses / totalIncome) * 100) : 0;
 
-  // Pie data (including loans)
+  // Pie data
   const expenseByCategory = transactions
     .filter(tx => !tx.category?.name.toLowerCase().includes('income'))
     .reduce((acc, tx) => {
@@ -261,18 +295,23 @@ function Dashboard() {
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AA336A', '#33AA33', '#8884d8', '#82ca9d', '#FF6363'];
 
-  // (Optional) Add your custom space theme styles here
-  const themeStyles = `
-    body {
-      background: #000000 !important;
-      color: #e0e0e0;
-    }
-    /* Add your full theme CSS if desired */
-  `;
+  if (loading) {
+    return (
+      <>
+        <Navbar bg="dark" variant="dark" expand="lg" className="mb-4">
+          <Container>
+            <Navbar.Brand>FinBuddy</Navbar.Brand>
+          </Container>
+        </Navbar>
+        <Container className="text-center py-5">
+          <h3>Loading your dashboard...</h3>
+        </Container>
+      </>
+    );
+  }
 
   return (
     <>
-      <style>{themeStyles}</style>
       <Navbar bg="dark" variant="dark" expand="lg" className="mb-4">
         <Container>
           <Navbar.Brand>FinBuddy</Navbar.Brand>
@@ -368,7 +407,7 @@ function Dashboard() {
                     <Form.Control
                       type="number"
                       value={activeIncome}
-                      onChange={(e) => setActiveIncome(parseFloat(e.target.value) || 0)}
+                      onChange={(e) => handleActiveChange(parseFloat(e.target.value) || 0)}
                     />
                   </Form.Group>
                   <Form.Group>
@@ -376,11 +415,11 @@ function Dashboard() {
                     <Form.Control
                       type="number"
                       value={passiveIncome}
-                      onChange={(e) => setPassiveIncome(parseFloat(e.target.value) || 0)}
+                      onChange={(e) => handlePassiveChange(parseFloat(e.target.value) || 0)}
                     />
                   </Form.Group>
                   <Form.Text className="text-muted">
-                    These amounts are saved locally (per browser).
+                    These amounts are saved to your account.
                   </Form.Text>
                 </Form>
               </Card.Body>
@@ -414,7 +453,6 @@ function Dashboard() {
               + Add Transaction
             </Button>
 
-            {/* Transactions as cards */}
             <Row>
               {transactions.map(tx => (
                 <Col md={6} lg={4} key={tx.id}>
