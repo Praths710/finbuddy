@@ -8,12 +8,14 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
-  // Replace with your actual Render backend URL
+  // Replace with your live backend URL
   const API_BASE = 'https://finbuddy-api-python.onrender.com';
 
+  // Set axios default header whenever token changes
   useEffect(() => {
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      // Fetch current user
       axios.get(`${API_BASE}/users/me`)
         .then(res => {
           setUser(res.data);
@@ -23,6 +25,7 @@ export const AuthProvider = ({ children }) => {
         })
         .finally(() => setLoading(false));
     } else {
+      delete axios.defaults.headers.common['Authorization'];
       setLoading(false);
     }
   }, [token]);
