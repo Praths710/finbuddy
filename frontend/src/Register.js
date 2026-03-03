@@ -13,11 +13,14 @@ function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(''); // Clear previous errors
     try {
       await register(email, password, fullName);
       navigate('/');
     } catch (err) {
-      setError('Registration failed. Email may already be used.');
+      // Extract the detailed error message from the server response
+      const message = err.response?.data?.detail || err.message || 'Registration failed';
+      setError(message);
     }
   };
 
@@ -51,7 +54,7 @@ function Register() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              maxLength="72"   // <-- Added to prevent long passwords
+              maxLength="72"
             />
           </Form.Group>
           <Button variant="primary" type="submit" className="w-100">
