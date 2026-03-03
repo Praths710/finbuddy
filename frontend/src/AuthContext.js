@@ -10,21 +10,14 @@ export const AuthProvider = ({ children }) => {
 
   const API_BASE = 'https://finbuddy-api-python.onrender.com'; // your backend URL
 
-  // Set axios default header whenever token changes
   useEffect(() => {
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       axios.get(`${API_BASE}/users/me`)
-        .then(res => {
-          setUser(res.data);
-        })
-        .catch(() => {
-          logout();
-        })
+        .then(res => setUser(res.data))
+        .catch(() => logout())
         .finally(() => setLoading(false));
     } else {
-      delete axios.defaults.headers.common['Authorization'];
-      setUser(null);
       setLoading(false);
     }
   }, [token]);
@@ -44,16 +37,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async (email, password, fullName) => {
-    // Optional: clear any existing token before registration attempt
-    // This ensures we're not accidentally using an old session
-    localStorage.removeItem('token');
-    delete axios.defaults.headers.common['Authorization'];
-
-    await axios.post(`${API_BASE}/register`, {
-      email,
-      password,
-      full_name: fullName
-    });
+    await axios.post(`${API_BASE}/register`, { email, password, full_name: fullName });
     return login(email, password);
   };
 
