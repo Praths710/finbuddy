@@ -299,25 +299,25 @@ def delete_loan(
     db.commit()
     return {"message": "Loan deleted successfully"}
 
-# -------------------- Startup event (temporarily disabled) --------------------
-# Startup event is disabled to allow the app to start while we add the user_id column to categories.
-# After running /fix-db-categories, uncomment this block and redeploy.
-#
-# @app.on_event("startup")
-# def startup_event():
-#     db = SessionLocal()
-#     default_cats = [
-#         "Food & Drink", "Transport", "Shopping", "Entertainment",
-#         "Bills & Utilities", "Healthcare", "Education", "Income",
-#         "Transfer", "Other"
-#     ]
-#     for cat_name in default_cats:
-#         # Check if global category already exists (user_id is None)
-#         exists = db.query(models.Category).filter(
-#             models.Category.name == cat_name,
-#             models.Category.user_id == None
-#         ).first()
-#         if not exists:
-#             db.add(models.Category(name=cat_name, user_id=None))
-#     db.commit()
-#     db.close()
+ -------------------- Startup event (temporarily disabled) --------------------
+ Startup event is disabled to allow the app to start while we add the user_id column to categories.
+ After running /fix-db-categories, uncomment this block and redeploy.
+
+ @app.on_event("startup")
+ def startup_event():
+     db = SessionLocal()
+     default_cats = [
+         "Food & Drink", "Transport", "Shopping", "Entertainment",
+         "Bills & Utilities", "Healthcare", "Education", "Income",
+         "Transfer", "Other"
+     ]
+     for cat_name in default_cats:
+         # Check if global category already exists (user_id is None)
+         exists = db.query(models.Category).filter(
+             models.Category.name == cat_name,
+             models.Category.user_id == None
+         ).first()
+         if not exists:
+             db.add(models.Category(name=cat_name, user_id=None))
+     db.commit()
+     db.close()
