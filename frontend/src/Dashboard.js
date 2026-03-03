@@ -6,23 +6,170 @@ import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recha
 import { useAuth } from './AuthContext';
 import { useNavigate } from 'react-router-dom';
 
+// Space theme CSS (your original dark/neon style)
+const themeStyles = `
+  body {
+    background: #000000 !important;
+    color: #e0e0e0;
+    font-family: 'Arial', sans-serif;
+    position: relative;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="10" cy="10" r="1" fill="white" opacity="0.5"/><circle cx="30" cy="40" r="1.5" fill="white" opacity="0.7"/><circle cx="70" cy="20" r="1" fill="white" opacity="0.6"/><circle cx="90" cy="80" r="1" fill="white" opacity="0.8"/><circle cx="50" cy="70" r="2" fill="white" opacity="0.4"/><circle cx="20" cy="90" r="1" fill="white" opacity="0.5"/></svg>');
+    background-repeat: repeat;
+    opacity: 0.3;
+    pointer-events: none;
+    animation: twinkle 5s infinite alternate;
+  }
+  @keyframes twinkle {
+    0% { opacity: 0.2; }
+    100% { opacity: 0.6; }
+  }
+  .card {
+    background: #111 !important;
+    border: 2px solid #ffffff !important;
+    border-radius: 15px !important;
+    box-shadow: 0 0 15px rgba(255,255,255,0.2);
+    color: white;
+  }
+  .card.bg-primary {
+    background: #1e3a8a !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 20px #3b82f6;
+  }
+  .card.bg-success {
+    background: #14532d !important;
+    border-color: #22c55e !important;
+    box-shadow: 0 0 20px #22c55e;
+  }
+  .card.bg-info {
+    background: #1e3a5f !important;
+    border-color: #06b6d4 !important;
+    box-shadow: 0 0 20px #06b6d4;
+  }
+  .card.bg-danger {
+    background: #7f1d1d !important;
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 20px #ef4444;
+  }
+  .card.bg-warning {
+    background: #854d0e !important;
+    border-color: #eab308 !important;
+    box-shadow: 0 0 20px #eab308;
+  }
+  .card.bg-warning .card-title,
+  .card.bg-warning .card-text {
+    color: white !important;
+  }
+  .card.bg-secondary {
+    background: #1e293b !important;
+    border-color: #94a3b8 !important;
+    box-shadow: 0 0 20px #94a3b8;
+  }
+  .transaction-card {
+    background: white !important;
+    border: 1px solid #ddd;
+    border-radius: 20px !important;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 8px 20px rgba(255,255,255,0.3);
+    color: black !important;
+    transition: transform 0.2s;
+  }
+  .transaction-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 28px rgba(255,255,255,0.5);
+  }
+  .transaction-card .amount {
+    font-size: 1.4rem;
+    font-weight: bold;
+  }
+  .transaction-card .description {
+    font-size: 1.1rem;
+  }
+  .transaction-card .category {
+    color: #555;
+    font-style: italic;
+  }
+  .transaction-card .actions {
+    margin-top: 10px;
+  }
+  .modal-content {
+    background: #222 !important;
+    border: 2px solid white;
+    color: white;
+  }
+  .modal-header, .modal-footer {
+    border-color: #444;
+  }
+  .modal-title {
+    color: white;
+  }
+  .form-label {
+    color: white !important;
+  }
+  .form-control, .form-select {
+    background: #333 !important;
+    border: 1px solid #555 !important;
+    color: white !important;
+  }
+  .form-control::placeholder {
+    color: #aaa;
+  }
+  .nav-tabs .nav-link {
+    color: #ccc;
+    border: 1px solid transparent;
+  }
+  .nav-tabs .nav-link.active {
+    background: #222;
+    color: white;
+    border-color: white white #222 white;
+  }
+  .btn-primary {
+    background: #3b82f6;
+    border-color: #2563eb;
+  }
+  .btn-outline-primary {
+    color: #3b82f6;
+    border-color: #3b82f6;
+  }
+  .btn-outline-danger {
+    color: #ef4444;
+    border-color: #ef4444;
+  }
+  .progress {
+    background: #333;
+    border: 1px solid white;
+    height: 25px;
+    border-radius: 15px;
+  }
+  .progress-bar {
+    background: linear-gradient(90deg, #3b82f6, #a855f7);
+    font-weight: bold;
+  }
+`;
+
 const API_BASE = 'https://finbuddy-api-python.onrender.com'; // your backend URL
 
 function Dashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  // State for data
   const [transactions, setTransactions] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loans, setLoans] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Income state (from backend)
   const [activeIncome, setActiveIncome] = useState(0);
   const [passiveIncome, setPassiveIncome] = useState(0);
 
-  // Form states
   const [form, setForm] = useState({
     amount: '',
     description: '',
@@ -40,7 +187,6 @@ function Dashboard() {
   const [editingId, setEditingId] = useState(null);
   const [editingLoanId, setEditingLoanId] = useState(null);
 
-  // Modal state
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState('add');
 
@@ -54,16 +200,13 @@ function Dashboard() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch categories (public)
         const catsRes = await axios.get(`${API_BASE}/categories/`);
         setCategories(catsRes.data);
 
-        // Fetch income
         const incomeRes = await axios.get(`${API_BASE}/user/income`);
         setActiveIncome(incomeRes.data.active_income);
         setPassiveIncome(incomeRes.data.passive_income);
 
-        // Fetch transactions and loans
         const [txRes, loansRes] = await Promise.all([
           axios.get(`${API_BASE}/transactions/`),
           axios.get(`${API_BASE}/loans/`)
@@ -78,9 +221,8 @@ function Dashboard() {
     };
 
     fetchData();
-  }, [user]); // <-- crucial: re-run when user changes
+  }, [user]); // <-- critical: re-run when user changes
 
-  // Update income handlers
   const handleActiveChange = (value) => {
     setActiveIncome(value);
     axios.put(`${API_BASE}/user/income?active=${value}&passive=${passiveIncome}`)
@@ -93,7 +235,6 @@ function Dashboard() {
       .catch(err => console.error("Error updating passive income", err));
   };
 
-  // Transaction handlers (unchanged)
   const handleDescriptionChange = (e) => {
     const desc = e.target.value;
     setForm({ ...form, description: desc });
@@ -192,7 +333,6 @@ function Dashboard() {
     }
   };
 
-  // Loan handlers
   const handleLoanSubmit = (e) => {
     e.preventDefault();
     const loanData = {
@@ -258,7 +398,6 @@ function Dashboard() {
     navigate('/login');
   };
 
-  // Calculations
   const otherIncome = transactions.reduce((acc, tx) => {
     if (tx.category && tx.category.name.toLowerCase().includes('income')) {
       acc += tx.amount;
@@ -279,7 +418,6 @@ function Dashboard() {
   const net = totalIncome - totalExpenses;
   const spentPercent = totalIncome > 0 ? Math.min(100, (totalExpenses / totalIncome) * 100) : 0;
 
-  // Pie data
   const expenseByCategory = transactions
     .filter(tx => !tx.category?.name.toLowerCase().includes('income'))
     .reduce((acc, tx) => {
@@ -298,6 +436,7 @@ function Dashboard() {
   if (loading) {
     return (
       <>
+        <style>{themeStyles}</style>
         <Navbar bg="dark" variant="dark" expand="lg" className="mb-4">
           <Container>
             <Navbar.Brand>FinBuddy</Navbar.Brand>
@@ -312,6 +451,7 @@ function Dashboard() {
 
   return (
     <>
+      <style>{themeStyles}</style>
       <Navbar bg="dark" variant="dark" expand="lg" className="mb-4">
         <Container>
           <Navbar.Brand>FinBuddy</Navbar.Brand>
@@ -328,7 +468,6 @@ function Dashboard() {
       </Navbar>
 
       <Container className="py-4" data-bs-theme="dark">
-        {/* Summary Cards */}
         <Row className="mb-4">
           <Col md={3}>
             <Card className="text-white bg-primary h-100">
@@ -369,7 +508,6 @@ function Dashboard() {
           </Col>
         </Row>
 
-        {/* Total Income & Net Row */}
         <Row className="mb-4">
           <Col md={6}>
             <Card className="text-white bg-secondary h-100">
@@ -395,7 +533,6 @@ function Dashboard() {
           </Col>
         </Row>
 
-        {/* Income Inputs */}
         <Row className="mb-4">
           <Col md={6}>
             <Card>
@@ -437,7 +574,6 @@ function Dashboard() {
           )}
         </Row>
 
-        {/* Tabs */}
         <Tabs defaultActiveKey="transactions" id="main-tabs" className="mb-3">
           <Tab eventKey="transactions" title="Transactions">
             <Button
@@ -456,7 +592,7 @@ function Dashboard() {
             <Row>
               {transactions.map(tx => (
                 <Col md={6} lg={4} key={tx.id}>
-                  <div className="transaction-card" style={{ background: 'white', borderRadius: 15, padding: 15, marginBottom: 15, boxShadow: '0 4px 8px rgba(0,0,0,0.1)' }}>
+                  <div className="transaction-card">
                     <div className="d-flex justify-content-between align-items-start">
                       <div>
                         <span className="badge bg-secondary">{new Date(tx.date).toLocaleDateString()}</span>
@@ -601,7 +737,6 @@ function Dashboard() {
           </Tab>
         </Tabs>
 
-        {/* Transaction Modal */}
         <Modal show={showModal} onHide={() => setShowModal(false)}>
           <Modal.Header closeButton>
             <Modal.Title>{modalMode === 'add' ? 'Add Transaction' : 'Edit Transaction'}</Modal.Title>
