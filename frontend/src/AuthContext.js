@@ -8,14 +8,12 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
-  // Replace with your live backend URL
-  const API_BASE = 'https://finbuddy-api-python.onrender.com';
+  const API_BASE = 'https://finbuddy-api-python.onrender.com'; // your backend URL
 
   // Set axios default header whenever token changes
   useEffect(() => {
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      // Fetch current user
       axios.get(`${API_BASE}/users/me`)
         .then(res => {
           setUser(res.data);
@@ -26,6 +24,7 @@ export const AuthProvider = ({ children }) => {
         .finally(() => setLoading(false));
     } else {
       delete axios.defaults.headers.common['Authorization'];
+      setUser(null);
       setLoading(false);
     }
   }, [token]);
@@ -45,6 +44,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async (email, password, fullName) => {
+    // Optional: clear any existing token before registration attempt
+    // This ensures we're not accidentally using an old session
+    localStorage.removeItem('token');
+    delete axios.defaults.headers.common['Authorization'];
+
     await axios.post(`${API_BASE}/register`, {
       email,
       password,
