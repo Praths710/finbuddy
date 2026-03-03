@@ -18,7 +18,7 @@ app = FastAPI()
 # -------------------- CORS CONFIGURATION --------------------
 origins = [
     "http://localhost:3000",
-    "https://finbuddy-fawn.vercel.app",   # your frontend URL
+    "https://finbuddy-fawn.vercel.app",
 ]
 
 app.add_middleware(
@@ -34,7 +34,7 @@ app.add_middleware(
 def root():
     return {"message": "FinMind API is running"}
 
-# -------------------- TEMPORARY USER MANAGEMENT ENDPOINTS (REMOVE AFTER USE) --------------------
+# -------------------- TEMPORARY USER MANAGEMENT ENDPOINTS --------------------
 @app.get("/list-users")
 def list_users(db: Session = Depends(get_db)):
     users = db.query(models.User).all()
@@ -48,9 +48,9 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
     db.delete(user)
     db.commit()
     return {"message": f"User {user_id} deleted"}
-# ----------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 
-# -------------------- DATABASE FIX ENDPOINTS (RUN ONCE, THEN REMOVE) --------------------
+# -------------------- DATABASE FIX ENDPOINTS --------------------
 @app.get("/fix-db")
 def fix_database(db: Session = Depends(get_db)):
     try:
@@ -67,14 +67,13 @@ def fix_database(db: Session = Depends(get_db)):
 @app.get("/fix-db-categories")
 def fix_db_categories(db: Session = Depends(get_db)):
     try:
-        # Add user_id column to categories if missing
         db.execute(text("ALTER TABLE categories ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id);"))
         db.commit()
         return {"message": "Added user_id column to categories."}
     except Exception as e:
         db.rollback()
         return {"error": str(e)}
-# -----------------------------------------------------------------------------------------
+# ------------------------------------------------------------------
 
 # -------------------- User Income Endpoints --------------------
 @app.get("/user/income", response_model=schemas.User)
@@ -146,7 +145,7 @@ def create_category(
     db_category = models.Category(
         name=category.name,
         description=category.description,
-        user_id=current_user.id  # assign to current user
+        user_id=current_user.id
     )
     db.add(db_category)
     db.commit()
@@ -160,7 +159,6 @@ def read_categories(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_active_user)
 ):
-    # Return global categories (user_id IS NULL) and user's own categories
     categories = db.query(models.Category)\
         .filter(
             (models.Category.user_id == current_user.id) | 
@@ -228,7 +226,7 @@ def update_transaction(
     db.refresh(transaction)
     return transaction
 
-# -------------------- Category suggestion endpoint (public) --------------------
+# -------------------- Category suggestion endpoint --------------------
 @app.get("/suggest-category/")
 def suggest_category_endpoint(description: str):
     cat_name = suggest_category(description)
@@ -299,25 +297,21 @@ def delete_loan(
     db.commit()
     return {"message": "Loan deleted successfully"}
 
- -------------------- Startup event (temporarily disabled) --------------------
- Startup event is disabled to allow the app to start while we add the user_id column to categories.
- After running /fix-db-categories, uncomment this block and redeploy.
-
- @app.on_event("startup")
- def startup_event():
-     db = SessionLocal()
-     default_cats = [
-         "Food & Drink", "Transport", "Shopping", "Entertainment",
-         "Bills & Utilities", "Healthcare", "Education", "Income",
-         "Transfer", "Other"
-     ]
-     for cat_name in default_cats:
-         # Check if global category already exists (user_id is None)
-         exists = db.query(models.Category).filter(
-             models.Category.name == cat_name,
-             models.Category.user_id == None
-         ).first()
-         if not exists:
-             db.add(models.Category(name=cat_name, user_id=None))
-     db.commit()
-     db.close()
+# -------------------- Startup event (active) --------------------
+@app.on_event("startup")
+def startup_event():
+    db = SessionLocal()
+    default_cats = [
+        "Food & Drink", "Transport", "Shopping", "Entertainment",
+        "Bills & Utilities", "Healthcare", "Education", "Income",
+        "Transfer", "Other"
+    ]
+    for cat_name in default_cats:
+        exists = db.query(models.Category).filter(
+            models.Category.name == cat_name,
+            models.Category.user_id == None
+        ).first()
+        if not exists:
+            db.add(models.Category(name=cat_name, user_id=None))
+    db.commit()
+    db.close()
