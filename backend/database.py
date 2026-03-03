@@ -10,7 +10,15 @@ SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./finmind.db")
 if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
     SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
+# Create engine with increased pool size to handle concurrent requests
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL,
+    pool_size=10,          # Increased from default 5
+    max_overflow=20,       # Increased from default 10
+    pool_timeout=30,       # Seconds to wait for a connection
+    pool_pre_ping=True     # Optional: checks connection validity before using
+)
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
