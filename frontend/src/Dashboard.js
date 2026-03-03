@@ -6,31 +6,12 @@ import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recha
 import { useAuth } from './AuthContext';
 import { useNavigate } from 'react-router-dom';
 
-// Space theme CSS (your original dark/neon style)
+// Pure black background – no stars
 const themeStyles = `
   body {
     background: #000000 !important;
     color: #e0e0e0;
     font-family: 'Arial', sans-serif;
-    position: relative;
-    overflow-x: hidden;
-  }
-  body::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="10" cy="10" r="1" fill="white" opacity="0.5"/><circle cx="30" cy="40" r="1.5" fill="white" opacity="0.7"/><circle cx="70" cy="20" r="1" fill="white" opacity="0.6"/><circle cx="90" cy="80" r="1" fill="white" opacity="0.8"/><circle cx="50" cy="70" r="2" fill="white" opacity="0.4"/><circle cx="20" cy="90" r="1" fill="white" opacity="0.5"/></svg>');
-    background-repeat: repeat;
-    opacity: 0.3;
-    pointer-events: none;
-    animation: twinkle 5s infinite alternate;
-  }
-  @keyframes twinkle {
-    0% { opacity: 0.2; }
-    100% { opacity: 0.6; }
   }
   .card {
     background: #111 !important;
@@ -221,7 +202,7 @@ function Dashboard() {
     };
 
     fetchData();
-  }, [user]); // <-- critical: re-run when user changes
+  }, [user]);
 
   const handleActiveChange = (value) => {
     setActiveIncome(value);
