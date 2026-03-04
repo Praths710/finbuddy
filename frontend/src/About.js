@@ -18,16 +18,17 @@ const aboutStyles = `
     text-align: center;
   }
   .hero-logo {
-    max-width: 250px;  /* Increased from 180px to 250px */
+    max-width: 250px;
     width: 100%;
     margin-bottom: 20px;
-    filter: drop-shadow(0 0 20px #3b82f6);
-    /* Attempt to remove white background – works if logo is white on white */
-    mix-blend-mode: multiply;
-  }
-  /* If the logo has a white background, this makes it transparent */
-  .hero-logo {
-    background-color: transparent;
+    /* Temporary red border to see image area – remove after confirming */
+    border: 2px solid red;
+    /* Light background circle behind logo */
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    padding: 15px;
+    box-shadow: 0 0 30px rgba(255,255,255,0.3);
+    display: inline-block;
   }
   .hero-title {
     font-family: 'Pacifico', cursive;
