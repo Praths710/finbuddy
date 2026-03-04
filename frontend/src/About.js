@@ -3,12 +3,15 @@ import { Container, Row, Col, Button, Card } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { FaRocket, FaChartLine, FaLock, FaMobileAlt, FaRobot, FaGift } from 'react-icons/fa';
 
-// Custom dark theme matching Dashboard
+// Custom dark theme with fun font imports
 const aboutStyles = `
+  @import url('https://fonts.googleapis.com/css2?family=Pacifico&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
   body {
     background: #000000 !important;
     color: #e0e0e0;
-    font-family: 'Arial', sans-serif;
+    font-family: 'Poppins', sans-serif;
   }
   .hero-section {
     padding: 80px 0 40px;
@@ -20,17 +23,27 @@ const aboutStyles = `
     filter: drop-shadow(0 0 20px #3b82f6);
   }
   .hero-title {
-    font-size: 3.5rem;
-    font-weight: bold;
-    background: linear-gradient(135deg, #3b82f6, #a855f7);
+    font-family: 'Pacifico', cursive;
+    font-size: 4.5rem;
+    font-weight: normal;
+    background: linear-gradient(45deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    background-size: 300% 300%;
+    animation: gradientShift 5s ease infinite;
     margin-bottom: 15px;
+    text-shadow: 0 0 20px rgba(255,255,255,0.3);
+  }
+  @keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
   }
   .hero-subtitle {
     font-size: 1.5rem;
     color: #aaccff;
     margin-bottom: 30px;
+    font-family: 'Poppins', sans-serif;
   }
   .feature-card {
     background: #111 !important;
