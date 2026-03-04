@@ -6,9 +6,138 @@ import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recha
 import { useAuth } from './AuthContext';
 import { useNavigate } from 'react-router-dom';
 
-// ... (themeStyles remains the same as before) ...
+// Pure black background – no stars
+const themeStyles = `
+  body {
+    background: #000000 !important;
+    color: #e0e0e0;
+    font-family: 'Arial', sans-serif;
+  }
+  .card {
+    background: #111 !important;
+    border: 2px solid #ffffff !important;
+    border-radius: 15px !important;
+    box-shadow: 0 0 15px rgba(255,255,255,0.2);
+    color: white;
+  }
+  .card.bg-primary {
+    background: #1e3a8a !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 20px #3b82f6;
+  }
+  .card.bg-success {
+    background: #14532d !important;
+    border-color: #22c55e !important;
+    box-shadow: 0 0 20px #22c55e;
+  }
+  .card.bg-info {
+    background: #1e3a5f !important;
+    border-color: #06b6d4 !important;
+    box-shadow: 0 0 20px #06b6d4;
+  }
+  .card.bg-danger {
+    background: #7f1d1d !important;
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 20px #ef4444;
+  }
+  .card.bg-warning {
+    background: #854d0e !important;
+    border-color: #eab308 !important;
+    box-shadow: 0 0 20px #eab308;
+  }
+  .card.bg-warning .card-title,
+  .card.bg-warning .card-text {
+    color: white !important;
+  }
+  .card.bg-secondary {
+    background: #1e293b !important;
+    border-color: #94a3b8 !important;
+    box-shadow: 0 0 20px #94a3b8;
+  }
+  .transaction-card {
+    background: white !important;
+    border: 1px solid #ddd;
+    border-radius: 20px !important;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 8px 20px rgba(255,255,255,0.3);
+    color: black !important;
+    transition: transform 0.2s;
+  }
+  .transaction-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 28px rgba(255,255,255,0.5);
+  }
+  .transaction-card .amount {
+    font-size: 1.4rem;
+    font-weight: bold;
+  }
+  .transaction-card .description {
+    font-size: 1.1rem;
+  }
+  .transaction-card .category {
+    color: #555;
+    font-style: italic;
+  }
+  .transaction-card .actions {
+    margin-top: 10px;
+  }
+  .modal-content {
+    background: #222 !important;
+    border: 2px solid white;
+    color: white;
+  }
+  .modal-header, .modal-footer {
+    border-color: #444;
+  }
+  .modal-title {
+    color: white;
+  }
+  .form-label {
+    color: white !important;
+  }
+  .form-control, .form-select {
+    background: #333 !important;
+    border: 1px solid #555 !important;
+    color: white !important;
+  }
+  .form-control::placeholder {
+    color: #aaa;
+  }
+  .nav-tabs .nav-link {
+    color: #ccc;
+    border: 1px solid transparent;
+  }
+  .nav-tabs .nav-link.active {
+    background: #222;
+    color: white;
+    border-color: white white #222 white;
+  }
+  .btn-primary {
+    background: #3b82f6;
+    border-color: #2563eb;
+  }
+  .btn-outline-primary {
+    color: #3b82f6;
+    border-color: #3b82f6;
+  }
+  .btn-outline-danger {
+    color: #ef4444;
+    border-color: #ef4444;
+  }
+  .progress {
+    background: #333;
+    border: 1px solid white;
+    height: 25px;
+    border-radius: 15px;
+  }
+  .progress-bar {
+    background: linear-gradient(90deg, #3b82f6, #a855f7);
+    font-weight: bold;
+  }
+`;
 
-const API_BASE = 'https://finbuddy-api-python.onrender.com';
+const API_BASE = 'https://finbuddy-api-python.onrender.com'; // your backend URL
 
 function Dashboard() {
   const { user, logout } = useAuth();
@@ -23,7 +152,28 @@ function Dashboard() {
   const [activeIncome, setActiveIncome] = useState('');
   const [passiveIncome, setPassiveIncome] = useState('');
 
-  // ... (all other state remains the same) ...
+  const [form, setForm] = useState({
+    amount: '',
+    description: '',
+    category_id: '',
+    date: new Date().toISOString().slice(0, 10)
+  });
+  const [loanForm, setLoanForm] = useState({
+    name: '',
+    amount: '',
+    start_date: new Date().toISOString().slice(0, 10),
+    end_date: '',
+    description: ''
+  });
+  const [suggestedCat, setSuggestedCat] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [editingLoanId, setEditingLoanId] = useState(null);
+
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryDesc, setNewCategoryDesc] = useState('');
+
+  const [showModal, setShowModal] = useState(false);
+  const [modalMode, setModalMode] = useState('add');
 
   // Log loans whenever they change (for debugging)
   useEffect(() => {
@@ -94,7 +244,6 @@ function Dashboard() {
       .catch(err => console.error("Error updating passive income", err));
   };
 
-  // Transaction handlers
   const handleDescriptionChange = (e) => {
     const desc = e.target.value;
     setForm({ ...form, description: desc });
@@ -181,7 +330,6 @@ function Dashboard() {
     }
   };
 
-  // Loan handlers
   const handleLoanSubmit = (e) => {
     e.preventDefault();
     const loanData = {
@@ -300,28 +448,6 @@ function Dashboard() {
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AA336A', '#33AA33', '#8884d8', '#82ca9d', '#FF6363'];
 
-  // Form states (include them here for brevity – they were omitted above but should be present)
-  const [form, setForm] = useState({
-    amount: '',
-    description: '',
-    category_id: '',
-    date: new Date().toISOString().slice(0, 10)
-  });
-  const [loanForm, setLoanForm] = useState({
-    name: '',
-    amount: '',
-    start_date: new Date().toISOString().slice(0, 10),
-    end_date: '',
-    description: ''
-  });
-  const [suggestedCat, setSuggestedCat] = useState(null);
-  const [editingId, setEditingId] = useState(null);
-  const [editingLoanId, setEditingLoanId] = useState(null);
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [newCategoryDesc, setNewCategoryDesc] = useState('');
-  const [showModal, setShowModal] = useState(false);
-  const [modalMode, setModalMode] = useState('add');
-
   if (loading) {
     return (
       <>
@@ -392,7 +518,6 @@ function Dashboard() {
                 <FaCreditCard size={30} className="mb-2" />
                 <Card.Title>Expenses</Card.Title>
                 <Card.Text className="display-6">₹{totalExpenses.toFixed(2)}</Card.Text>
-                {/* No "incl. EMI" text */}
               </Card.Body>
             </Card>
           </Col>
