@@ -21,31 +21,24 @@ const aboutStyles = `
     max-width: 250px;
     width: 100%;
     margin-bottom: 20px;
-    /* Temporary red border to see image area – remove after confirming */
-    border: 2px solid red;
-    /* Light background circle behind logo */
-    background: rgba(255, 255, 255, 0.2);
+    /* Glowing border effect */
+    border: 2px solid #3b82f6;
     border-radius: 50%;
-    padding: 15px;
-    box-shadow: 0 0 30px rgba(255,255,255,0.3);
+    padding: 10px;
+    box-shadow: 0 0 20px #3b82f6, 0 0 40px #3b82f6, inset 0 0 10px #3b82f6;
+    transition: box-shadow 0.3s ease;
     display: inline-block;
+  }
+  .hero-logo:hover {
+    box-shadow: 0 0 30px #3b82f6, 0 0 60px #3b82f6, inset 0 0 15px #3b82f6;
   }
   .hero-title {
     font-family: 'Pacifico', cursive;
-    font-size: 4.5rem;
+    font-size: 3.5rem; /* reduced from 4.5rem */
     font-weight: normal;
-    background: linear-gradient(45deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-size: 300% 300%;
-    animation: gradientShift 5s ease infinite;
+    color: #3b82f6; /* solid neon blue */
     margin-bottom: 15px;
-    text-shadow: 0 0 20px rgba(255,255,255,0.3);
-  }
-  @keyframes gradientShift {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+    text-shadow: 0 0 10px #3b82f6, 0 0 20px #3b82f6;
   }
   .hero-subtitle {
     font-size: 1.5rem;
