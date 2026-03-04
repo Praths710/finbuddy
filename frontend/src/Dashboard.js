@@ -515,7 +515,7 @@ function Dashboard() {
                 <FaCreditCard size={30} className="mb-2" />
                 <Card.Title>Expenses</Card.Title>
                 <Card.Text className="display-6">₹{totalExpenses.toFixed(2)}</Card.Text>
-                {totalEMI > 0 && <small>(incl. ₹{totalEMI.toFixed(2)} EMI)</small>}
+                {/* The "incl. EMI" line has been removed */}
               </Card.Body>
             </Card>
           </Col>
