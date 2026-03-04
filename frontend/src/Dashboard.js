@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Container, Row, Col, Card, Form, Button, Tabs, Tab, Modal, ProgressBar, Navbar } from 'react-bootstrap';
-import { FaMoneyBillWave, FaCoins, FaCreditCard, FaBalanceScale, FaChartLine, FaSignOutAlt } from 'react-icons/fa';
+import { FaMoneyBillWave, FaCoins, FaCreditCard, FaBalanceScale, FaChartLine, FaSignOutAlt, FaRobot } from 'react-icons/fa';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useAuth } from './AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
+import AIChat from './components/AIChat'; // Import AI chat component
 
 // Pure black background – no stars
 const themeStyles = `
@@ -154,6 +155,7 @@ function Dashboard() {
   const [categories, setCategories] = useState([]);
   const [loans, setLoans] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showAIChat, setShowAIChat] = useState(false); // State for AI chat
 
   // Income state: start as empty string
   const [activeIncome, setActiveIncome] = useState('');
@@ -486,6 +488,13 @@ function Dashboard() {
             <Navbar.Text className="me-3">
               Signed in as: {user?.full_name || user?.email}
             </Navbar.Text>
+            <Button
+              variant="outline-info"
+              className="me-2"
+              onClick={() => setShowAIChat(!showAIChat)}
+            >
+              <FaRobot /> AI Assistant
+            </Button>
             <Button variant="outline-light" onClick={handleLogout}>
               <FaSignOutAlt /> Logout
             </Button>
@@ -848,6 +857,9 @@ function Dashboard() {
           </Modal.Body>
         </Modal>
       </Container>
+
+      {/* AI Chat component */}
+      {showAIChat && <AIChat onClose={() => setShowAIChat(false)} />}
     </>
   );
 }
