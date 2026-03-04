@@ -4,7 +4,7 @@ import { Container, Row, Col, Card, Form, Button, Tabs, Tab, Modal, ProgressBar,
 import { FaMoneyBillWave, FaCoins, FaCreditCard, FaBalanceScale, FaChartLine, FaSignOutAlt } from 'react-icons/fa';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useAuth } from './AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 // Pure black background – no stars
 const themeStyles = `
@@ -134,6 +134,13 @@ const themeStyles = `
   .progress-bar {
     background: linear-gradient(90deg, #3b82f6, #a855f7);
     font-weight: bold;
+  }
+  /* Logo styling */
+  .navbar-logo {
+    height: 40px;
+    width: auto;
+    margin-right: 10px;
+    filter: drop-shadow(0 0 5px #3b82f6);
   }
 `;
 
@@ -454,7 +461,9 @@ function Dashboard() {
         <style>{themeStyles}</style>
         <Navbar bg="dark" variant="dark" expand="lg" className="mb-4">
           <Container>
-            <Navbar.Brand>FinBuddy</Navbar.Brand>
+            <Link to="/" className="navbar-brand">
+              <img src="/FinBuddy-new.png" alt="FinBuddy Logo" className="navbar-logo" />
+            </Link>
           </Container>
         </Navbar>
         <Container className="text-center py-5">
@@ -469,7 +478,9 @@ function Dashboard() {
       <style>{themeStyles}</style>
       <Navbar bg="dark" variant="dark" expand="lg" className="mb-4">
         <Container>
-          <Navbar.Brand>FinBuddy</Navbar.Brand>
+          <Link to="/" className="navbar-brand">
+            <img src="/FinBuddy-new.png" alt="FinBuddy Logo" className="navbar-logo" />
+          </Link>
           <Navbar.Toggle />
           <Navbar.Collapse className="justify-content-end">
             <Navbar.Text className="me-3">
