@@ -133,7 +133,7 @@ function About() {
         {/* Hero Section */}
         <div className="hero-section">
           <Container>
-            <img src="/FinBuddy.png" alt="FinBuddy Logo" className="hero-logo" />
+            <img src="/FinBuddy-new.png" alt="FinBuddy Logo" className="hero-logo" />
             <h1 className="hero-title">FinBuddy</h1>
             <p className="hero-subtitle">Your AI-powered financial companion</p>
             <p style={{ fontSize: '1.2rem', color: '#ccc', maxWidth: '800px', margin: '0 auto 40px' }}>
