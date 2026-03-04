@@ -3,10 +3,9 @@ import { Container, Row, Col, Button, Card } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { FaRocket, FaChartLine, FaLock, FaMobileAlt, FaRobot, FaGift } from 'react-icons/fa';
 
-// Custom dark theme with fun font imports
+// Custom dark theme
 const aboutStyles = `
-  @import url('https://fonts.googleapis.com/css2?family=Pacifico&display=swap');
-  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@700&display=swap');
 
   body {
     background: #000000 !important;
@@ -32,14 +31,25 @@ const aboutStyles = `
   .hero-logo:hover {
     box-shadow: 0 0 30px #3b82f6, 0 0 60px #3b82f6, inset 0 0 15px #3b82f6;
   }
-  .hero-title {
-    font-family: 'Pacifico', cursive;
-    font-size: 3.5rem; /* reduced from 4.5rem */
-    font-weight: normal;
-    color: #3b82f6; /* solid neon blue */
+  .multicolor-title {
+    font-family: 'Poppins', sans-serif;
+    font-size: 4rem;
+    font-weight: 700;
     margin-bottom: 15px;
-    text-shadow: 0 0 10px #3b82f6, 0 0 20px #3b82f6;
+    letter-spacing: 2px;
   }
+  .multicolor-title span {
+    display: inline-block;
+  }
+  .letter-f { color: #4285F4; }  /* Google Blue */
+  .letter-i { color: #EA4335; }  /* Google Red */
+  .letter-n { color: #FBBC05; }  /* Google Yellow */
+  .letter-b { color: #4285F4; }  /* Blue */
+  .letter-u { color: #34A853; }  /* Google Green */
+  .letter-d { color: #EA4335; }  /* Red */
+  .letter-d2 { color: #FBBC05; } /* Yellow */
+  .letter-y { color: #4285F4; }  /* Blue */
+
   .hero-subtitle {
     font-size: 1.5rem;
     color: #aaccff;
@@ -128,7 +138,16 @@ function About() {
         <div className="hero-section">
           <Container>
             <img src="/FinBuddy-new.png" alt="FinBuddy Logo" className="hero-logo" />
-            <h1 className="hero-title">FinBuddy</h1>
+            <div className="multicolor-title">
+              <span className="letter-f">F</span>
+              <span className="letter-i">i</span>
+              <span className="letter-n">n</span>
+              <span className="letter-b">B</span>
+              <span className="letter-u">u</span>
+              <span className="letter-d">d</span>
+              <span className="letter-d2">d</span>
+              <span className="letter-y">y</span>
+            </div>
             <p className="hero-subtitle">Your AI-powered financial companion</p>
             <p style={{ fontSize: '1.2rem', color: '#ccc', maxWidth: '800px', margin: '0 auto 40px' }}>
               Take control of your finances with intelligent tracking, predictive insights, and rewards that motivate smart money habits.
