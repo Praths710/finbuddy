@@ -148,10 +148,10 @@ function Dashboard() {
   const [loans, setLoans] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [activeIncome, setActiveIncome] = useState(0);
-  const [passiveIncome, setPassiveIncome] = useState(0);
+  // Income state: start as empty string, not 0
+  const [activeIncome, setActiveIncome] = useState('');
+  const [passiveIncome, setPassiveIncome] = useState('');
 
-  // Form states
   const [form, setForm] = useState({
     amount: '',
     description: '',
@@ -169,7 +169,6 @@ function Dashboard() {
   const [editingId, setEditingId] = useState(null);
   const [editingLoanId, setEditingLoanId] = useState(null);
 
-  // New category form state
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryDesc, setNewCategoryDesc] = useState('');
 
@@ -190,8 +189,9 @@ function Dashboard() {
         setCategories(catsRes.data);
 
         const incomeRes = await axios.get(`${API_BASE}/user/income`);
-        setActiveIncome(incomeRes.data.active_income);
-        setPassiveIncome(incomeRes.data.passive_income);
+        // If income is 0, set to empty string, else convert to string for input
+        setActiveIncome(incomeRes.data.active_income === 0 ? '' : incomeRes.data.active_income.toString());
+        setPassiveIncome(incomeRes.data.passive_income === 0 ? '' : incomeRes.data.passive_income.toString());
 
         const [txRes, loansRes] = await Promise.all([
           axios.get(`${API_BASE}/transactions/`),
@@ -209,20 +209,22 @@ function Dashboard() {
     fetchData();
   }, [user]);
 
-  // Income handlers
+  // Income handlers with empty string support
   const handleActiveChange = (value) => {
     setActiveIncome(value);
-    axios.put(`${API_BASE}/user/income?active=${value}&passive=${passiveIncome}`)
+    // Convert to number for backend, empty string becomes 0
+    const numValue = value === '' ? 0 : parseFloat(value);
+    axios.put(`${API_BASE}/user/income?active=${numValue}&passive=${passiveIncome === '' ? 0 : parseFloat(passiveIncome)}`)
       .catch(err => console.error("Error updating active income", err));
   };
 
   const handlePassiveChange = (value) => {
     setPassiveIncome(value);
-    axios.put(`${API_BASE}/user/income?active=${activeIncome}&passive=${value}`)
+    const numValue = value === '' ? 0 : parseFloat(value);
+    axios.put(`${API_BASE}/user/income?active=${activeIncome === '' ? 0 : parseFloat(activeIncome)}&passive=${numValue}`)
       .catch(err => console.error("Error updating passive income", err));
   };
 
-  // Transaction handlers
   const handleDescriptionChange = (e) => {
     const desc = e.target.value;
     setForm({ ...form, description: desc });
@@ -321,7 +323,6 @@ function Dashboard() {
     }
   };
 
-  // Loan handlers
   const handleLoanSubmit = (e) => {
     e.preventDefault();
     const loanData = {
@@ -382,7 +383,6 @@ function Dashboard() {
     }
   };
 
-  // New category handler
   const handleAddCategory = (e) => {
     e.preventDefault();
     axios.post(`${API_BASE}/categories/`, {
@@ -390,7 +390,6 @@ function Dashboard() {
       description: newCategoryDesc
     })
       .then(() => {
-        // Refresh categories
         axios.get(`${API_BASE}/categories/`).then(res => setCategories(res.data));
         setNewCategoryName('');
         setNewCategoryDesc('');
@@ -403,7 +402,10 @@ function Dashboard() {
     navigate('/login');
   };
 
-  // Calculations
+  // Calculations – convert empty strings to 0 for numeric ops
+  const activeNum = activeIncome === '' ? 0 : parseFloat(activeIncome);
+  const passiveNum = passiveIncome === '' ? 0 : parseFloat(passiveIncome);
+
   const otherIncome = transactions.reduce((acc, tx) => {
     if (tx.category && tx.category.name.toLowerCase().includes('income')) {
       acc += tx.amount;
@@ -420,7 +422,7 @@ function Dashboard() {
 
   const totalEMI = loans.reduce((acc, loan) => acc + loan.amount, 0);
   const totalExpenses = expensesFromTransactions + totalEMI;
-  const totalIncome = activeIncome + passiveIncome + otherIncome;
+  const totalIncome = activeNum + passiveNum + otherIncome;
   const net = totalIncome - totalExpenses;
   const spentPercent = totalIncome > 0 ? Math.min(100, (totalExpenses / totalIncome) * 100) : 0;
 
@@ -481,7 +483,9 @@ function Dashboard() {
               <Card.Body>
                 <FaMoneyBillWave size={30} className="mb-2" />
                 <Card.Title>Active Income</Card.Title>
-                <Card.Text className="display-6">₹{activeIncome.toFixed(2)}</Card.Text>
+                <Card.Text className="display-6">
+                  ₹{activeNum.toFixed(2)}
+                </Card.Text>
               </Card.Body>
             </Card>
           </Col>
@@ -490,7 +494,9 @@ function Dashboard() {
               <Card.Body>
                 <FaCoins size={30} className="mb-2" />
                 <Card.Title>Passive Income</Card.Title>
-                <Card.Text className="display-6">₹{passiveIncome.toFixed(2)}</Card.Text>
+                <Card.Text className="display-6">
+                  ₹{passiveNum.toFixed(2)}
+                </Card.Text>
               </Card.Body>
             </Card>
           </Col>
@@ -553,7 +559,8 @@ function Dashboard() {
                     <Form.Control
                       type="number"
                       value={activeIncome}
-                      onChange={(e) => handleActiveChange(parseFloat(e.target.value) || 0)}
+                      onChange={(e) => handleActiveChange(e.target.value)}
+                      placeholder="Enter amount"
                     />
                   </Form.Group>
                   <Form.Group>
@@ -561,7 +568,8 @@ function Dashboard() {
                     <Form.Control
                       type="number"
                       value={passiveIncome}
-                      onChange={(e) => handlePassiveChange(parseFloat(e.target.value) || 0)}
+                      onChange={(e) => handlePassiveChange(e.target.value)}
+                      placeholder="Enter amount"
                     />
                   </Form.Group>
                   <Form.Text className="text-muted">
