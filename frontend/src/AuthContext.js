@@ -8,32 +8,30 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
-  const API_BASE = 'https://finbuddy-api-python.onrender.com'; // your backend URL
+  const API_BASE = 'https://finbuddy-api-python.onrender.com'; // Your backend URL
 
   useEffect(() => {
-    console.log('AuthProvider useEffect - token from localStorage:', token);
+    console.log('AuthProvider useEffect - token:', token);
     if (token) {
-      console.log('Setting axios default header with token');
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      console.log('Fetching user data from /users/me');
+      console.log('Fetching user with token...');
       axios.get(`${API_BASE}/users/me`)
         .then(res => {
-          console.log('User data fetched successfully:', res.data);
+          console.log('User fetched:', res.data);
           setUser(res.data);
         })
         .catch(err => {
-          console.error('Failed to fetch user data:', err.response?.status, err.response?.data);
+          console.error('Failed to fetch user:', err);
           logout();
         })
         .finally(() => setLoading(false));
     } else {
-      console.log('No token found, setting loading false');
       setLoading(false);
     }
   }, [token]);
 
   const login = async (email, password) => {
-    console.log('Login attempt for:', email);
+    console.log('Login attempt:', email);
     const formData = new FormData();
     formData.append('username', email);
     formData.append('password', password);
@@ -42,12 +40,11 @@ export const AuthProvider = ({ children }) => {
       console.log('Login response:', res.data);
       const { access_token } = res.data;
       localStorage.setItem('token', access_token);
-      console.log('Token stored in localStorage');
       axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
-      console.log('Axios default header set');
       setToken(access_token);
+      // Fetch user immediately
       const userRes = await axios.get(`${API_BASE}/users/me`);
-      console.log('User data after login:', userRes.data);
+      console.log('User after login:', userRes.data);
       setUser(userRes.data);
       return userRes.data;
     } catch (err) {
@@ -57,10 +54,15 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async (email, password, fullName) => {
-    console.log('Register attempt for:', email);
+    console.log('Register attempt:', email);
     try {
-      await axios.post(`${API_BASE}/register`, { email, password, full_name: fullName });
-      console.log('Registration successful, now logging in');
+      await axios.post(`${API_BASE}/register`, {
+        email,
+        password,
+        full_name: fullName
+      });
+      console.log('Registration successful, logging in...');
+      // Automatically log in after registration
       return login(email, password);
     } catch (err) {
       console.error('Registration error:', err.response?.status, err.response?.data);
@@ -69,7 +71,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    console.log('Logging out');
+    console.log('Logout');
     localStorage.removeItem('token');
     delete axios.defaults.headers.common['Authorization'];
     setToken(null);

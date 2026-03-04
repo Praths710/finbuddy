@@ -13,12 +13,12 @@ function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(''); // Clear previous errors
+    setError('');
     try {
       await register(email, password, fullName);
-      navigate('/');
+      // If we reach here, login was successful
+      navigate('/dashboard');
     } catch (err) {
-      // Extract the detailed error message from the server response
       const message = err.response?.data?.detail || err.message || 'Registration failed';
       setError(message);
     }

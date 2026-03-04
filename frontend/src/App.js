@@ -13,12 +13,9 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Public routes */}
           <Route path="/" element={<About />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-
-          {/* Protected route – dashboard */}
           <Route
             path="/dashboard"
             element={
@@ -27,8 +24,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-
-          {/* Fallback – redirect to home */}
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </BrowserRouter>
