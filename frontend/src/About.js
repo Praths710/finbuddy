@@ -18,9 +18,16 @@ const aboutStyles = `
     text-align: center;
   }
   .hero-logo {
-    max-width: 180px;
+    max-width: 250px;  /* Increased from 180px to 250px */
+    width: 100%;
     margin-bottom: 20px;
     filter: drop-shadow(0 0 20px #3b82f6);
+    /* Attempt to remove white background – works if logo is white on white */
+    mix-blend-mode: multiply;
+  }
+  /* If the logo has a white background, this makes it transparent */
+  .hero-logo {
+    background-color: transparent;
   }
   .hero-title {
     font-family: 'Pacifico', cursive;
