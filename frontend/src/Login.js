@@ -44,6 +44,7 @@ function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              maxLength="72"
             />
           </Form.Group>
           <Button variant="primary" type="submit" className="w-100">

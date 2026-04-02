@@ -10,7 +10,9 @@ import auth
 from database import get_db, SessionLocal, engine
 from categorizer import suggest_category
 from sqlalchemy import text
-from ai import router as ai_router
+
+# Uncomment AI router when AI files are ready
+# from ai import router as ai_router
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -19,7 +21,7 @@ app = FastAPI()
 # -------------------- CORS CONFIGURATION --------------------
 origins = [
     "http://localhost:3000",
-    "https://finbuddy-fawn.vercel.app",   # your frontend URL
+    "https://finbuddy-fawn.vercel.app",   # your exact frontend URL
 ]
 
 app.add_middleware(
@@ -31,15 +33,14 @@ app.add_middleware(
 )
 # ------------------------------------------------------------
 
-# -------------------- INCLUDE AI ROUTER --------------------
-app.include_router(ai_router)
-# ------------------------------------------------------------
+# Uncomment when AI is ready
+# app.include_router(ai_router)
 
 @app.get("/")
 def root():
     return {"message": "FinMind API is running"}
 
-# -------------------- TEMPORARY USER MANAGEMENT ENDPOINTS --------------------
+# -------------------- TEMPORARY DEBUG ENDPOINTS --------------------
 @app.get("/list-users")
 def list_users(db: Session = Depends(get_db)):
     users = db.query(models.User).all()
@@ -53,9 +54,7 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
     db.delete(user)
     db.commit()
     return {"message": f"User {user_id} deleted"}
-# ----------------------------------------------------------------------------
 
-# -------------------- DATABASE FIX ENDPOINTS --------------------
 @app.get("/fix-db")
 def fix_database(db: Session = Depends(get_db)):
     try:
@@ -64,7 +63,7 @@ def fix_database(db: Session = Depends(get_db)):
         db.execute(text("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id);"))
         db.execute(text("ALTER TABLE loans ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id);"))
         db.commit()
-        return {"message": "Database schema updated: added income and user_id columns."}
+        return {"message": "Database schema updated."}
     except Exception as e:
         db.rollback()
         return {"error": str(e)}
@@ -121,10 +120,10 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 @app.post("/token", response_model=schemas.Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    # Validate password length (bcrypt limit)
+    # Password length check
     if len(form_data.password.encode('utf-8')) > 72:
         raise HTTPException(status_code=400, detail="Password too long (max 72 bytes)")
-
+    
     user = auth.authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
@@ -142,7 +141,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 def read_users_me(current_user: schemas.User = Depends(auth.get_current_active_user)):
     return current_user
 
-# -------------------- Category Endpoints (protected) --------------------
+# -------------------- Category Endpoints --------------------
 @app.post("/categories/", response_model=schemas.Category)
 def create_category(
     category: schemas.CategoryCreate,
@@ -174,7 +173,7 @@ def read_categories(
         .offset(skip).limit(limit).all()
     return categories
 
-# -------------------- Transaction Endpoints (protected) --------------------
+# -------------------- Transaction Endpoints --------------------
 @app.post("/transactions/", response_model=schemas.Transaction)
 def create_transaction(
     transaction: schemas.TransactionCreate,
@@ -233,7 +232,7 @@ def update_transaction(
     db.refresh(transaction)
     return transaction
 
-# -------------------- Category suggestion endpoint --------------------
+# -------------------- Category suggestion --------------------
 @app.get("/suggest-category/")
 def suggest_category_endpoint(description: str):
     cat_name = suggest_category(description)
@@ -245,7 +244,7 @@ def suggest_category_endpoint(description: str):
             return {"suggested_category_id": cat.id, "suggested_category_name": cat.name}
     return {"suggested_category_id": None, "suggested_category_name": None}
 
-# -------------------- Loan Endpoints (protected) --------------------
+# -------------------- Loan Endpoints --------------------
 @app.post("/loans/", response_model=schemas.Loan)
 def create_loan(
     loan: schemas.LoanCreate,
@@ -304,7 +303,7 @@ def delete_loan(
     db.commit()
     return {"message": "Loan deleted successfully"}
 
-# -------------------- Startup event (active) --------------------
+# -------------------- Startup event --------------------
 @app.on_event("startup")
 def startup_event():
     db = SessionLocal()
