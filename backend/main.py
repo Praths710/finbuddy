@@ -10,6 +10,7 @@ import auth
 from database import get_db, SessionLocal, engine
 from categorizer import suggest_category
 from sqlalchemy import text
+from ai import router as ai_router
 
 models.Base.metadata.create_all(bind=engine)
 
