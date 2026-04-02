@@ -1,64 +1,61 @@
 import os
 import logging
-from typing import Dict, Any, List
-from datetime import datetime, timedelta
-import pandas as pd
-import numpy as np
-from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
+from typing import Dict, Any
+from openai import AsyncOpenAI
 
 logger = logging.getLogger(__name__)
 
 class FinancialAIAgent:
     def __init__(self, api_key: str):
-        self.llm = ChatOpenAI(
-            api_key=api_key,
-            model="gpt-4o",
-            temperature=0.1,
-            max_tokens=1000
-        )
+        self.client = AsyncOpenAI(api_key=api_key)
     
     async def process_query(self, query: str, user_data: Dict[str, Any]) -> Dict[str, Any]:
         try:
-            # Simple analysis without heavy ML
-            transactions = pd.DataFrame(user_data.get('transactions', []))
-            if transactions.empty:
-                return {"message": "No transaction data available yet. Add some transactions to get insights."}
+            # Build a summary from user data
+            transactions = user_data.get('transactions', [])
+            total_spent = sum(t.get('amount', 0) for t in transactions)
+            income = user_data.get('income', {})
+            active = income.get('active', 0)
+            passive = income.get('passive', 0)
+            total_income = active + passive
             
-            # Basic spending analysis
-            total_spent = transactions['amount'].sum()
-            avg_transaction = transactions['amount'].mean()
+            context = f"""
+            User financial summary:
+            - Total spent: ₹{total_spent:.2f}
+            - Total income: ₹{total_income:.2f}
+            - Active income: ₹{active:.2f}
+            - Passive income: ₹{passive:.2f}
+            - Number of transactions: {len(transactions)}
+            """
             
-            # Category breakdown
-            category_spending = transactions.groupby('category')['amount'].sum().to_dict()
-            top_categories = sorted(category_spending.items(), key=lambda x: x[1], reverse=True)[:3]
+            # Call OpenAI
+            response = await self.client.chat.completions.create(
+                model="gpt-3.5-turbo",  # or "gpt-4o" if you have access
+                messages=[
+                    {"role": "system", "content": "You are a friendly, concise financial advisor. Answer the user's question based on their data."},
+                    {"role": "user", "content": f"{context}\n\nUser question: {query}"}
+                ],
+                temperature=0.7,
+                max_tokens=500
+            )
             
-            # Prepare response
-            response = f"Based on your data:\n"
-            response += f"- Total spent: ₹{total_spent:.2f}\n"
-            response += f"- Average transaction: ₹{avg_transaction:.2f}\n"
-            response += f"- Top spending categories: {', '.join([f'{cat} (₹{amt:.2f})' for cat, amt in top_categories])}\n"
+            answer = response.choices[0].message.content
             
-            # Use LLM for advice
-            prompt = ChatPromptTemplate.from_messages([
-                ("system", "You are a friendly financial advisor. Give concise, actionable advice based on the user's spending data."),
-                ("user", f"User spending: {response}\nUser question: {query}")
-            ])
-            advice_response = await self.llm.ainvoke(prompt.format_messages())
-            advice = advice_response.content
+            # Simple analysis for frontend
+            analysis = {
+                "total": total_spent,
+                "daily_average": total_spent / max(1, len(transactions)),
+                "top_categories": [],
+                "change": 0,
+                "percent_change": 0
+            }
             
             return {
-                "analysis": {
-                    "total": total_spent,
-                    "daily_average": total_spent / max(1, len(transactions)),
-                    "top_categories": top_categories,
-                    "change": 0,
-                    "percent_change": 0
-                },
-                "advice": {"advice": advice},
+                "analysis": analysis,
+                "advice": {"advice": answer},
                 "health_score": {"score": 70, "rating": "Good"},
-                "message": response
+                "message": answer
             }
         except Exception as e:
-            logger.error(f"AI processing error: {e}")
-            return {"error": str(e), "message": "Sorry, I encountered an error processing your request."}
+            logger.error(f"AI error: {e}")
+            return {"error": str(e), "message": "AI service temporarily unavailable. Please try again later."}

@@ -9,6 +9,3 @@ bcrypt
 fuzzywuzzy
 email-validator
 openai
-langchain
-langchain-core
-langchain-openai
