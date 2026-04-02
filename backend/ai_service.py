@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 from langchain_openai import ChatOpenAI
-from langchain.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 
 logger = logging.getLogger(__name__)
 
