@@ -10,9 +10,27 @@ function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  const handlePasswordChange = (e) => {
+    const val = e.target.value;
+    // Check byte length (UTF-8)
+    const byteLen = new TextEncoder().encode(val).length;
+    if (byteLen > 72) {
+      setError("Password too long (max 72 bytes). Please shorten it.");
+    } else {
+      setError('');
+    }
+    setPassword(val);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    // Re-check byte length before sending
+    const byteLen = new TextEncoder().encode(password).length;
+    if (byteLen > 72) {
+      setError("Password too long (max 72 bytes). Please shorten it.");
+      return;
+    }
     try {
       await login(email, password);
       navigate('/dashboard');
@@ -42,7 +60,7 @@ function Login() {
             <Form.Control
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={handlePasswordChange}
               required
               maxLength="72"
             />

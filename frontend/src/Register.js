@@ -11,12 +11,27 @@ function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
 
+  const handlePasswordChange = (e) => {
+    const val = e.target.value;
+    const byteLen = new TextEncoder().encode(val).length;
+    if (byteLen > 72) {
+      setError("Password too long (max 72 bytes). Please shorten it.");
+    } else {
+      setError('');
+    }
+    setPassword(val);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    const byteLen = new TextEncoder().encode(password).length;
+    if (byteLen > 72) {
+      setError("Password too long (max 72 bytes). Please shorten it.");
+      return;
+    }
     try {
       await register(email, password, fullName);
-      // If we reach here, login was successful
       navigate('/dashboard');
     } catch (err) {
       const message = err.response?.data?.detail || err.message || 'Registration failed';
@@ -52,7 +67,7 @@ function Register() {
             <Form.Control
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={handlePasswordChange}
               required
               maxLength="72"
             />

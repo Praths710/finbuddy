@@ -11,9 +11,6 @@ from database import get_db, SessionLocal, engine
 from categorizer import suggest_category
 from sqlalchemy import text
 
-# Uncomment AI router when AI files are ready
-# from ai import router as ai_router
-
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
@@ -21,7 +18,7 @@ app = FastAPI()
 # -------------------- CORS CONFIGURATION --------------------
 origins = [
     "http://localhost:3000",
-    "https://finbuddy-fawn.vercel.app",   # your exact frontend URL
+    "https://finbuddy-fawn.vercel.app",
 ]
 
 app.add_middleware(
@@ -33,51 +30,61 @@ app.add_middleware(
 )
 # ------------------------------------------------------------
 
-# Uncomment when AI is ready
-# app.include_router(ai_router)
-
 @app.get("/")
 def root():
     return {"message": "FinMind API is running"}
 
-# -------------------- TEMPORARY DEBUG ENDPOINTS --------------------
-@app.get("/list-users")
-def list_users(db: Session = Depends(get_db)):
-    users = db.query(models.User).all()
-    return [{"id": u.id, "email": u.email} for u in users]
+# -------------------- HELPER: truncate password to 72 bytes --------------------
+def truncate_password(pwd: str) -> str:
+    """Truncate password to 72 bytes (bcrypt limit)"""
+    b = pwd.encode('utf-8')
+    if len(b) > 72:
+        b = b[:72]
+    return b.decode('utf-8', errors='ignore')
 
-@app.delete("/delete-user/{user_id}")
-def delete_user(user_id: int, db: Session = Depends(get_db)):
-    user = db.query(models.User).filter(models.User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    db.delete(user)
+# -------------------- Authentication Endpoints --------------------
+@app.post("/register", response_model=schemas.User)
+def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    db_user = db.query(models.User).filter(models.User.email == user.email).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Truncate password to 72 bytes before hashing
+    safe_password = truncate_password(user.password)
+    hashed_password = auth.get_password_hash(safe_password)
+    
+    db_user = models.User(
+        email=user.email,
+        hashed_password=hashed_password,
+        full_name=user.full_name,
+        active_income=user.active_income,
+        passive_income=user.passive_income
+    )
+    db.add(db_user)
     db.commit()
-    return {"message": f"User {user_id} deleted"}
+    db.refresh(db_user)
+    return db_user
 
-@app.get("/fix-db")
-def fix_database(db: Session = Depends(get_db)):
-    try:
-        db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS active_income FLOAT DEFAULT 0.0;"))
-        db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS passive_income FLOAT DEFAULT 0.0;"))
-        db.execute(text("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id);"))
-        db.execute(text("ALTER TABLE loans ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id);"))
-        db.commit()
-        return {"message": "Database schema updated."}
-    except Exception as e:
-        db.rollback()
-        return {"error": str(e)}
+@app.post("/token", response_model=schemas.Token)
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    # Truncate password to 72 bytes before verification
+    safe_password = truncate_password(form_data.password)
+    user = auth.authenticate_user(db, form_data.username, safe_password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = auth.create_access_token(
+        data={"sub": user.email}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
 
-@app.get("/fix-db-categories")
-def fix_db_categories(db: Session = Depends(get_db)):
-    try:
-        db.execute(text("ALTER TABLE categories ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id);"))
-        db.commit()
-        return {"message": "Added user_id column to categories."}
-    except Exception as e:
-        db.rollback()
-        return {"error": str(e)}
-# ------------------------------------------------------------------
+@app.get("/users/me", response_model=schemas.User)
+def read_users_me(current_user: schemas.User = Depends(auth.get_current_active_user)):
+    return current_user
 
 # -------------------- User Income Endpoints --------------------
 @app.get("/user/income", response_model=schemas.User)
@@ -95,50 +102,6 @@ def update_income(
     current_user.passive_income = passive
     db.commit()
     db.refresh(current_user)
-    return current_user
-
-# -------------------- Authentication Endpoints --------------------
-@app.post("/register", response_model=schemas.User)
-def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    db_user = db.query(models.User).filter(models.User.email == user.email).first()
-    if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-    if len(user.password.encode('utf-8')) > 72:
-        raise HTTPException(status_code=400, detail="Password too long (max 72 bytes)")
-    hashed_password = auth.get_password_hash(user.password)
-    db_user = models.User(
-        email=user.email,
-        hashed_password=hashed_password,
-        full_name=user.full_name,
-        active_income=user.active_income,
-        passive_income=user.passive_income
-    )
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    return db_user
-
-@app.post("/token", response_model=schemas.Token)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    # Password length check
-    if len(form_data.password.encode('utf-8')) > 72:
-        raise HTTPException(status_code=400, detail="Password too long (max 72 bytes)")
-    
-    user = auth.authenticate_user(db, form_data.username, form_data.password)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = auth.create_access_token(
-        data={"sub": user.email}, expires_delta=access_token_expires
-    )
-    return {"access_token": access_token, "token_type": "bearer"}
-
-@app.get("/users/me", response_model=schemas.User)
-def read_users_me(current_user: schemas.User = Depends(auth.get_current_active_user)):
     return current_user
 
 # -------------------- Category Endpoints --------------------
@@ -167,7 +130,7 @@ def read_categories(
 ):
     categories = db.query(models.Category)\
         .filter(
-            (models.Category.user_id == current_user.id) | 
+            (models.Category.user_id == current_user.id) |
             (models.Category.user_id == None)
         )\
         .offset(skip).limit(limit).all()

@@ -9,9 +9,7 @@ import schemas
 import models
 from database import get_db
 
-# to get a string like this run:
-# openssl rand -hex 32
-SECRET_KEY = "your-secret-key-here-change-in-production"   # Use env variable in production
+SECRET_KEY = "your-secret-key-here-change-in-production"  # Set via environment variable!
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
