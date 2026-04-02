@@ -10,7 +10,7 @@ import auth
 from database import get_db, SessionLocal, engine
 from categorizer import suggest_category
 from sqlalchemy import text
-from ai import router as ai_router
+from ai import router as ai_router   # <-- ADDED AI ROUTER
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -19,7 +19,7 @@ app = FastAPI()
 # -------------------- CORS CONFIGURATION --------------------
 origins = [
     "http://localhost:3000",
-    "https://finbuddy-fawn.vercel.app",
+    "https://finbuddy-fawn.vercel.app",   # your frontend URL
 ]
 
 app.add_middleware(
@@ -29,6 +29,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# ------------------------------------------------------------
+
+# -------------------- INCLUDE AI ROUTER --------------------
+app.include_router(ai_router)
 # ------------------------------------------------------------
 
 @app.get("/")
