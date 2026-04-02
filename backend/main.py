@@ -10,7 +10,7 @@ import auth
 from database import get_db, SessionLocal, engine
 from categorizer import suggest_category
 from sqlalchemy import text
-from ai import router as ai_router   # <-- ADDED AI ROUTER
+from ai import router as ai_router
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -121,8 +121,10 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 @app.post("/token", response_model=schemas.Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    # Validate password length (bcrypt limit)
     if len(form_data.password.encode('utf-8')) > 72:
         raise HTTPException(status_code=400, detail="Password too long (max 72 bytes)")
+
     user = auth.authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
