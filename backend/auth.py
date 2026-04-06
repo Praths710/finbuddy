@@ -5,11 +5,13 @@ from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+import os
 import schemas
 import models
 from database import get_db
 
-SECRET_KEY = "your-secret-key-here-change-in-production"  # Set via environment variable!
+# Use environment variable for SECRET_KEY, or fallback to a default (change in production!)
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here-change-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 

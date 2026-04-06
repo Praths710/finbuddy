@@ -10,6 +10,11 @@ import auth
 from database import get_db, SessionLocal, engine
 from categorizer import suggest_category
 from sqlalchemy import text
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -36,11 +41,12 @@ def root():
 
 # -------------------- HELPER: truncate password to 72 bytes --------------------
 def truncate_password(pwd: str) -> str:
-    """Truncate password to 72 bytes (bcrypt limit)"""
-    b = pwd.encode('utf-8')
-    if len(b) > 72:
-        b = b[:72]
-    return b.decode('utf-8', errors='ignore')
+    """Truncate password to 72 bytes (bcrypt limit). Logs if truncated."""
+    encoded = pwd.encode('utf-8')
+    if len(encoded) > 72:
+        logger.warning(f"Password truncated from {len(encoded)} to 72 bytes")
+        encoded = encoded[:72]
+    return encoded.decode('utf-8', errors='ignore')
 
 # -------------------- Authentication Endpoints --------------------
 @app.post("/register", response_model=schemas.User)
@@ -49,7 +55,6 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
     
-    # Truncate password to 72 bytes before hashing
     safe_password = truncate_password(user.password)
     hashed_password = auth.get_password_hash(safe_password)
     
@@ -67,20 +72,36 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 @app.post("/token", response_model=schemas.Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    # Truncate password to 72 bytes before verification
-    safe_password = truncate_password(form_data.password)
-    user = auth.authenticate_user(db, form_data.username, safe_password)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
+    try:
+        # Log the attempt (without password)
+        logger.info(f"Login attempt for email: {form_data.username}")
+        
+        # Truncate password
+        safe_password = truncate_password(form_data.password)
+        
+        # Authenticate
+        user = auth.authenticate_user(db, form_data.username, safe_password)
+        if not user:
+            logger.warning(f"Failed login for email: {form_data.username}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect email or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        # Create token
+        access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = auth.create_access_token(
+            data={"sub": user.email}, expires_delta=access_token_expires
         )
-    access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = auth.create_access_token(
-        data={"sub": user.email}, expires_delta=access_token_expires
-    )
-    return {"access_token": access_token, "token_type": "bearer"}
+        logger.info(f"Successful login for email: {form_data.username}")
+        return {"access_token": access_token, "token_type": "bearer"}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in /token: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @app.get("/users/me", response_model=schemas.User)
 def read_users_me(current_user: schemas.User = Depends(auth.get_current_active_user)):
