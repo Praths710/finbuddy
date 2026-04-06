@@ -10,34 +10,37 @@ import schemas
 import models
 from database import get_db
 
-# Use environment variable for SECRET_KEY, or fallback (change in production!)
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here-change-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Create a custom CryptContext that truncates passwords to 72 bytes
+class TruncatingCryptContext(CryptContext):
+    def hash(self, secret, **kwargs):
+        # Truncate to 72 bytes
+        encoded = secret.encode('utf-8')[:72]
+        truncated = encoded.decode('utf-8', errors='ignore')
+        return super().hash(truncated, **kwargs)
+    
+    def verify(self, secret, hash, **kwargs):
+        # Truncate to 72 bytes before verifying
+        encoded = secret.encode('utf-8')[:72]
+        truncated = encoded.decode('utf-8', errors='ignore')
+        return super().verify(truncated, hash, **kwargs)
+
+pwd_context = TruncatingCryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-def truncate_password_bytes(password: str) -> str:
-    """Truncate password to 72 bytes (bcrypt limit) and return as string."""
-    encoded = password.encode('utf-8')[:72]
-    return encoded.decode('utf-8', errors='ignore')
-
 def verify_password(plain_password, hashed_password):
-    # Truncate plain password to 72 bytes before verifying
-    safe_password = truncate_password_bytes(plain_password)
-    return pwd_context.verify(safe_password, hashed_password)
+    return pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password):
-    # Truncate password to 72 bytes before hashing
-    safe_password = truncate_password_bytes(password)
-    return pwd_context.hash(safe_password)
+    return pwd_context.hash(password)
 
 def authenticate_user(db: Session, email: str, password: str):
     user = db.query(models.User).filter(models.User.email == email).first()
     if not user:
         return False
-    # verify_password already truncates
     if not verify_password(password, user.hashed_password):
         return False
     return user
