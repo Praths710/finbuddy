@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+import bcrypt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
@@ -14,28 +14,26 @@ SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here-change-in-production"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-# Create a custom CryptContext that truncates passwords to 72 bytes
-class TruncatingCryptContext(CryptContext):
-    def hash(self, secret, **kwargs):
-        # Truncate to 72 bytes
-        encoded = secret.encode('utf-8')[:72]
-        truncated = encoded.decode('utf-8', errors='ignore')
-        return super().hash(truncated, **kwargs)
-    
-    def verify(self, secret, hash, **kwargs):
-        # Truncate to 72 bytes before verifying
-        encoded = secret.encode('utf-8')[:72]
-        truncated = encoded.decode('utf-8', errors='ignore')
-        return super().verify(truncated, hash, **kwargs)
-
-pwd_context = TruncatingCryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
+def _truncate_to_72_bytes(password: str) -> bytes:
+    """Convert to bytes and truncate to 72 bytes (bcrypt limit)."""
+    pwd_bytes = password.encode('utf-8')
+    if len(pwd_bytes) > 72:
+        pwd_bytes = pwd_bytes[:72]
+    return pwd_bytes
 
-def get_password_hash(password):
-    return pwd_context.hash(password)
+def get_password_hash(password: str) -> str:
+    """Hash a password using bcrypt, truncating to 72 bytes."""
+    pwd_bytes = _truncate_to_72_bytes(password)
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(pwd_bytes, salt)
+    return hashed.decode('utf-8')
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a password, truncating to 72 bytes."""
+    pwd_bytes = _truncate_to_72_bytes(plain_password)
+    return bcrypt.checkpw(pwd_bytes, hashed_password.encode('utf-8'))
 
 def authenticate_user(db: Session, email: str, password: str):
     user = db.query(models.User).filter(models.User.email == email).first()
