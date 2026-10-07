@@ -75,3 +75,46 @@ class Goal(Base):
     saved = Column(Float, default=0.0)
     deadline = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class Holding(Base):
+    """An investment the user tracks: a stock, ETF, mutual fund or coin (no lots = watchlist)."""
+    __tablename__ = "holdings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    asset_type = Column(String)  # stock | etf | mf | crypto
+    symbol = Column(String)      # RELIANCE.NS / AMFI scheme code / CoinGecko id
+    name = Column(String)
+    exchange = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    lots = relationship("Lot", back_populates="holding", cascade="all, delete-orphan")
+    sips = relationship("Sip", back_populates="holding", cascade="all, delete-orphan")
+
+class Sip(Base):
+    """A monthly auto-investment; its installments are materialised as lots at that day's price."""
+    __tablename__ = "sips"
+
+    id = Column(Integer, primary_key=True, index=True)
+    holding_id = Column(Integer, ForeignKey("holdings.id"), index=True)
+    amount = Column(Float)
+    day = Column(Integer)  # day of month, 1-28
+    start_date = Column(DateTime)
+    active = Column(Integer, default=1)
+
+    holding = relationship("Holding", back_populates="sips")
+
+class Lot(Base):
+    """One buy or sell. Prices are INR per unit."""
+    __tablename__ = "lots"
+
+    id = Column(Integer, primary_key=True, index=True)
+    holding_id = Column(Integer, ForeignKey("holdings.id"), index=True)
+    side = Column(String, default="buy")  # buy | sell
+    units = Column(Float)
+    price = Column(Float)
+    date = Column(DateTime)
+    sip_id = Column(Integer, ForeignKey("sips.id"), nullable=True)
+
+    holding = relationship("Holding", back_populates="lots")

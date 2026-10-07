@@ -5,6 +5,7 @@ import { AuthProvider } from './AuthContext';
 import Login from './Login';
 import Register from './Register';
 import Dashboard from './Dashboard';
+import Portfolio from './Portfolio';
 import About from './About';
 import ProtectedRoute from './ProtectedRoute';
 
@@ -26,6 +27,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/portfolio"
+            element={
+              <ProtectedRoute>
+                <Portfolio />
               </ProtectedRoute>
             }
           />

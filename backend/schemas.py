@@ -107,3 +107,23 @@ class Goal(GoalCreate):
 
     class Config:
         from_attributes = True
+
+# -------------------- Portfolio schemas --------------------
+class HoldingCreate(BaseModel):
+    asset_type: str = Field(pattern="^(stock|etf|mf|crypto)$")
+    symbol: str = Field(min_length=1, max_length=64)
+    name: str = Field(min_length=1, max_length=200)
+    exchange: Optional[str] = None
+
+class LotCreate(BaseModel):
+    side: str = Field(default="buy", pattern="^(buy|sell)$")
+    date: datetime
+    # Give either units, or amount (₹) — price defaults to that day's market price
+    units: Optional[float] = Field(default=None, gt=0)
+    amount: Optional[float] = Field(default=None, gt=0)
+    price: Optional[float] = Field(default=None, gt=0)
+
+class SipCreate(BaseModel):
+    amount: float = Field(gt=0)
+    day: int = Field(ge=1, le=28)
+    start_date: datetime

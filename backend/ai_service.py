@@ -105,6 +105,12 @@ def build_context(user_data: Dict[str, Any], s: Dict[str, Any]) -> str:
         "Savings goals: " + (", ".join(
             f"{g['name']} ₹{g['saved']:.0f}/₹{g['target']:.0f}" + (f" by {g['deadline']}" if g['deadline'] else "")
             for g in user_data.get("goals", [])) or "none"),
+        "Investments (invested → current value): " + (", ".join(
+            f"{i['name']} [{i['type']}] ₹{i['invested']:.0f} → "
+            + (f"₹{i['value']:.0f} ({(i['value'] - i['invested']) / i['invested'] * 100:+.1f}%)"
+               if i.get("value") is not None and i["invested"] else "price n/a")
+            + (f", SIP ₹{i['sip']:.0f}/mo" if i.get("sip") else "")
+            for i in user_data.get("investments", []) if i["units"] > 0) or "none"),
         "Recent transactions:",
         *[f"- {t['date'][:10]} {t['description']} ({t['category']}) ₹{t['amount']:.0f}" for t in recent],
     ]

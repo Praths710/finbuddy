@@ -5,7 +5,7 @@ import { Modal } from 'react-bootstrap';
 import {
   FiChevronLeft, FiChevronRight, FiLogOut, FiPlus, FiSearch, FiEdit2, FiTrash2, FiArrowDownLeft,
   FiArrowUpRight, FiCreditCard, FiPercent, FiPieChart, FiList, FiSettings, FiGrid, FiCalendar, FiInbox,
-  FiUser, FiTag, FiEye, FiEyeOff, FiDownload, FiTarget, FiTrendingUp, FiAlertTriangle, FiSliders,
+  FiUser, FiTag, FiDownload, FiTarget, FiTrendingUp, FiAlertTriangle, FiSliders,
 } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi2';
 import {
@@ -13,8 +13,8 @@ import {
 } from 'recharts';
 import { API_BASE } from './config';
 import { useAuth } from './AuthContext';
-import AIChat from './components/AIChat';
-import { Brand, Toasts, useToasts, useCountUp, Spinner } from './components/ui';
+import AppNav from './components/AppNav';
+import { Toasts, useToasts, useCountUp, Spinner } from './components/ui';
 import {
   money, compactMoney, monthStats, healthScore, currentMonthKey, shiftMonth, monthLabel, monthKey,
   isIncomeTx, isIncomeCategory, colorFor, greeting, initials, loanActiveIn, apiError,
@@ -48,24 +48,12 @@ function Dashboard() {
 
   const [month, setMonth] = useState(currentMonthKey());
   const [tab, setTab] = useState('overview');
-  const [aiOpen, setAiOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [txModal, setTxModal] = useState(null); // null | {} (new) | tx (edit)
   const [loanModal, setLoanModal] = useState(null);
   const [confirm, setConfirm] = useState(null); // { title, body, onYes }
   const [budgetModal, setBudgetModal] = useState(null);
   const [goalModal, setGoalModal] = useState(null);
   const [contribModal, setContribModal] = useState(null);
-  const [privacy, setPrivacy] = useState(() => {
-    try { return localStorage.getItem('fb-privacy') === '1'; } catch { return false; }
-  });
-
-  // Privacy mode blurs every amount on screen (handy in public).
-  useEffect(() => {
-    document.body.classList.toggle('privacy-on', privacy);
-    try { localStorage.setItem('fb-privacy', privacy ? '1' : '0'); } catch { /* storage unavailable */ }
-    return () => document.body.classList.remove('privacy-on');
-  }, [privacy]);
 
   const loadTransactions = useCallback(
     () => axios.get(`${API_BASE}/transactions/?limit=5000`).then((r) => setTransactions(r.data)), []);
@@ -122,38 +110,8 @@ function Dashboard() {
   return (
     <>
       {/* ---------------- Nav ---------------- */}
-      <nav className="fb-nav">
-        <div className="fb-nav-inner">
-          <Brand to="/dashboard" />
-          <div className="ms-auto d-flex align-items-center gap-2">
-            <button className="fb-icon-btn" onClick={() => setPrivacy((p) => !p)}
-              aria-label={privacy ? 'Show amounts' : 'Hide amounts'} title={privacy ? 'Show amounts' : 'Hide amounts (privacy mode)'}>
-              {privacy ? <FiEyeOff /> : <FiEye />}
-            </button>
-            <button className="ai-trigger" onClick={() => setAiOpen(true)}>
-              <HiSparkles className="spark" /> <span className="txt">Ask FinBuddy AI</span>
-            </button>
-            <div className="position-relative">
-              <button className="fb-avatar" onClick={() => setMenuOpen((o) => !o)} aria-label="Account menu">
-                {initials(user)}
-              </button>
-              {menuOpen && (
-                <>
-                  <div className="position-fixed top-0 start-0 w-100 h-100" style={{ zIndex: 1025 }} onClick={() => setMenuOpen(false)} />
-                  <div className="fb-menu">
-                    <div className="fb-menu-head">
-                      <div className="fw-semibold">{user?.full_name || 'Your account'}</div>
-                      <div className="small muted fb-ellipsis">{user?.email}</div>
-                    </div>
-                    <button onClick={() => { setTab('settings'); setMenuOpen(false); }}><FiSettings /> Settings</button>
-                    <button onClick={handleLogout}><FiLogOut /> Sign out</button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </nav>
+      <AppNav onSettings={() => setTab('settings')}
+        health={healthScore(monthStats({ transactions, loans, baseIncome, key: currentMonthKey() }))} />
 
       <div className="dash">
         {/* ---------------- Header ---------------- */}
@@ -288,7 +246,6 @@ function Dashboard() {
           onSaved={(msg) => { setContribModal(null); loadGoals(); toast(msg); }} toast={toast} />
       )}
       <ConfirmModal confirm={confirm} onClose={() => setConfirm(null)} />
-      <AIChat open={aiOpen} onClose={() => setAiOpen(false)} user={user} health={healthScore(monthStats({ transactions, loans, baseIncome, key: currentMonthKey() }))} />
       <Toasts toasts={toasts} />
     </>
   );
@@ -1234,7 +1191,7 @@ function ContributeModal({ goal, onClose, onSaved, toast }) {
   );
 }
 
-function ConfirmModal({ confirm, onClose }) {
+export function ConfirmModal({ confirm, onClose }) {
   const [busy, setBusy] = useState(false);
   if (!confirm) return null;
   const yes = () => {

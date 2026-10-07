@@ -1,0 +1,62 @@
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--pos); box-shadow: 0 0 0 0 rgba(116, 214, 168, 0.6); animation: pf-pulse 2s infinite; }
+@keyframes pf-pulse { 0% { box-shadow: 0 0 0 0 rgba(116, 214, 168, 0.55); } 70% { box-shadow: 0 0 0 8px rgba(116, 214, 168, 0); } 100% { box-shadow: 0 0 0 0 rgba(116, 214, 168, 0); } }
+.spin { animation: fb-spin 0.9s linear infinite; }
+
+.pf-today { display: inline-flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; padding: 6px 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--line); }
+.pf-today .muted { font-weight: 500; }
+.hero-meta small { font-size: 12.5px; font-weight: 600; opacity: 0.85; }
+
+.fb-seg button .count { font-size: 11px; color: var(--faint); font-weight: 600; margin-left: 2px; }
+.fb-seg button.active .count { color: var(--gold); }
+.pf-sort { width: auto !important; min-width: 170px; }
+
+/* Holdings table */
+.pf-list { padding: 8px; }
+.pf-head, .pf-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2.4fr) 1fr 1.1fr 1fr 1fr;
+  gap: 14px; align-items: center;
+}
+.pf-head { padding: 8px 14px 10px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--faint); border-bottom: 1px solid var(--line); }
+.pf-head span:not(:first-child), .pf-cell { text-align: right; }
+.pf-row {
+  width: 100%; border: 0; background: transparent; color: var(--text); text-align: left;
+  padding: 13px 14px; border-radius: 12px; transition: background 0.15s, transform 0.15s;
+}
+.pf-row + .pf-row { border-top: 1px solid var(--line); }
+.pf-row:hover { background: rgba(232, 207, 143, 0.045); }
+.pf-cell { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; min-width: 0; }
+.pf-cell-name { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.pf-tag { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px; border-radius: 99px; font-size: 11px; font-weight: 600; color: var(--gold); background: rgba(232, 207, 143, 0.1); border: 1px solid rgba(232, 207, 143, 0.22); }
+
+/* Drawer */
+.pf-drawer { width: min(480px, 100vw); }
+.pf-drawer .ai-body > * { flex-shrink: 0; } /* scroll instead of squashing sections */
+.pf-chart { padding: 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--line); }
+.pf-range button { padding: 5px 10px; font-size: 12.5px; }
+.pf-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.pf-stats > div { background: var(--ink-1); padding: 12px 14px; display: flex; flex-direction: column; gap: 3px; }
+.pf-stats span { font-size: 12px; color: var(--muted); }
+.pf-stats b { font-size: 15.5px; font-weight: 700; }
+.pf-line { display: flex; align-items: center; gap: 12px; padding: 10px 2px; border-bottom: 1px solid var(--line); font-size: 14px; }
+.pf-side { width: 40px; text-align: center; font-size: 11px; font-weight: 700; padding: 3px 0; border-radius: 6px; flex: none; }
+.pf-side.buy { color: var(--pos); background: rgba(116, 214, 168, 0.1); }
+.pf-side.sell { color: var(--neg); background: rgba(241, 154, 143, 0.1); }
+
+/* Add investment */
+.pf-modal .modal-content { min-height: 420px; }
+.pf-results { max-height: 340px; overflow-y: auto; margin: 0 -6px; }
+.pf-result { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 8px; border: 0; background: transparent; color: var(--text); border-radius: 12px; }
+.pf-result:hover { background: rgba(232, 207, 143, 0.06); }
+.pf-result > svg { color: var(--gold); flex: none; }
+.pf-picked { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 14px; border: 1px solid rgba(232, 207, 143, 0.25); background: rgba(232, 207, 143, 0.05); }
+.fb-seg.w-100 button { flex: 1; justify-content: center; }
+
+@media (max-width: 860px) {
+  .pf-head { display: none; }
+  .pf-row { grid-template-columns: minmax(0, 1fr) auto; row-gap: 6px; }
+  .pf-row .pf-cell:nth-child(2), .pf-row .pf-cell:nth-child(3) { display: none; }
+  .pf-row .pf-cell:nth-child(5) { grid-column: 2; }
+  .pf-row .pf-cell:nth-child(4) { grid-row: 1; grid-column: 2; }
+  .pf-row .pf-cell:nth-child(5) { flex-direction: row; gap: 6px; }
+}

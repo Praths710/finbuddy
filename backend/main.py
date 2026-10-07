@@ -11,6 +11,8 @@ from database import get_db, SessionLocal, engine
 from categorizer import suggest_category
 from sqlalchemy import text
 from ai import router as ai_router
+from market import router as market_router
+from portfolio import router as portfolio_router
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -44,6 +46,8 @@ app.add_middleware(
 # ------------------------------------------------------------
 
 app.include_router(ai_router)
+app.include_router(market_router)
+app.include_router(portfolio_router)
 
 @app.get("/")
 def root():
