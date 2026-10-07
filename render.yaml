@@ -21,5 +21,5 @@ services:
         generateValue: true
       - key: PIP_ONLY_BINARY
         value: ":all:"
-      - key: OPENAI_API_KEY
+      - key: AI_API_KEY
         sync: false

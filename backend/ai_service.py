@@ -5,9 +5,15 @@ from openai import AsyncOpenAI
 
 logger = logging.getLogger(__name__)
 
+# Groq's free API speaks the OpenAI protocol, so the openai library works with
+# it. To use OpenAI instead, set AI_BASE_URL=https://api.openai.com/v1 and
+# AI_MODEL=gpt-4o-mini.
+AI_BASE_URL = os.getenv("AI_BASE_URL", "https://api.groq.com/openai/v1")
+AI_MODEL = os.getenv("AI_MODEL", "llama-3.3-70b-versatile")
+
 class FinancialAIAgent:
     def __init__(self, api_key: str):
-        self.client = AsyncOpenAI(api_key=api_key)
+        self.client = AsyncOpenAI(api_key=api_key, base_url=AI_BASE_URL)
     
     async def process_query(self, query: str, user_data: Dict[str, Any]) -> Dict[str, Any]:
         try:
@@ -30,7 +36,7 @@ class FinancialAIAgent:
             
             # Call OpenAI
             response = await self.client.chat.completions.create(
-                model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+                model=AI_MODEL,
                 messages=[
                     {"role": "system", "content": "You are a friendly, concise financial advisor. Answer the user's question based on their data."},
                     {"role": "user", "content": f"{context}\n\nUser question: {query}"}

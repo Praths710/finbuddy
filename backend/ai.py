@@ -16,9 +16,9 @@ _ai_agent = None
 def get_ai_agent():
     global _ai_agent
     if _ai_agent is None:
-        api_key = os.getenv("OPENAI_API_KEY")
+        api_key = os.getenv("AI_API_KEY") or os.getenv("OPENAI_API_KEY")
         if not api_key:
-            logger.warning("OPENAI_API_KEY not set")
+            logger.warning("AI_API_KEY not set")
             return None
         _ai_agent = FinancialAIAgent(api_key=api_key)
     return _ai_agent
@@ -35,7 +35,7 @@ async def chat_with_ai(
     
     ai_agent = get_ai_agent()
     if not ai_agent:
-        raise HTTPException(status_code=503, detail="AI service unavailable. Set OPENAI_API_KEY.")
+        raise HTTPException(status_code=503, detail="AI service unavailable. Set AI_API_KEY.")
     
     # Fetch user transactions
     transactions = db.query(Transaction).filter(Transaction.user_id == current_user.id).all()
