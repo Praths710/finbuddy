@@ -72,3 +72,44 @@
   .lp-chat { position: relative; right: auto; bottom: auto; width: auto; margin: -20px 12px 0; }
   .lp-section { padding: 64px 0; }
 }
+
+/* ---------- Luxe additions ---------- */
+.lp-device { animation: lp-float 7s ease-in-out infinite; }
+@keyframes lp-float {
+  0%, 100% { transform: perspective(1400px) rotateY(-8deg) rotateX(4deg) translateY(0); }
+  50% { transform: perspective(1400px) rotateY(-6deg) rotateX(3deg) translateY(-10px); }
+}
+.lp-chat { animation: lp-float-chat 6s ease-in-out 0.8s infinite; }
+@keyframes lp-float-chat { 0%, 100% { transform: rotate(2deg) translateY(0); } 50% { transform: rotate(1deg) translateY(-8px); } }
+
+.lp-marquee {
+  overflow: hidden;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(90deg, rgba(212,175,55,0.04), rgba(212,175,55,0.09), rgba(212,175,55,0.04));
+  padding: 18px 0;
+  mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+}
+.lp-marquee-track { display: flex; width: max-content; animation: lp-marquee 38s linear infinite; }
+.lp-marquee-track span {
+  font-family: var(--serif); font-style: italic; font-size: 26px; color: var(--gold);
+  padding: 0 26px; white-space: nowrap; display: inline-flex; align-items: center; gap: 52px;
+}
+.lp-marquee-track i { font-style: normal; font-size: 13px; color: rgba(232, 207, 143, 0.5); }
+@keyframes lp-marquee { to { transform: translateX(-50%); } }
+
+.lp-promise { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding: 64px 0 20px; text-align: center; }
+.lp-promise .k { font-size: clamp(40px, 5vw, 60px); line-height: 1; }
+.lp-promise .v { color: var(--muted); font-size: 14px; margin-top: 10px; letter-spacing: 0.02em; }
+.lp-promise > div + div { border-left: 1px solid var(--line); }
+
+.lp-feature .ico { background: linear-gradient(145deg, rgba(232,207,143,0.16), rgba(212,175,55,0.04)); }
+.lp-step .n { background: var(--grad-text); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+@media (max-width: 960px) { .lp-device { animation: none; } }
+@media (max-width: 620px) {
+  .lp-promise { grid-template-columns: 1fr 1fr; row-gap: 32px; }
+  .lp-promise > div + div { border-left: 0; }
+  .lp-marquee-track span { font-size: 21px; }
+}

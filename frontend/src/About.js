@@ -1,28 +1,32 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import {
-  FiArrowRight, FiCpu, FiTag, FiCalendar, FiActivity, FiLock, FiSmartphone, FiCheck,
+  FiArrowRight, FiCpu, FiTag, FiCalendar, FiActivity, FiLock, FiCheck, FiTarget,
 } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi2';
 import { useAuth } from './AuthContext';
-import { Brand } from './components/ui';
+import { Brand, useReveal } from './components/ui';
 import './About.css';
 
+const MARQUEE = ['Budgets', 'Savings goals', 'AI assistant', 'EMI tracking', 'Month-end forecast',
+  'CSV export', 'Privacy mode', 'Health score', 'Smart categories', 'Cash-flow charts'];
+
 const FEATURES = [
+  [<FiTarget key="i" />, 'Budgets & savings goals', 'Set limits per category, get warned at 80%, and watch goals fill up with the exact monthly amount you need.'],
   [<FiCpu key="i" />, 'An assistant that knows your numbers', 'Ask “where did my money go?” and get an answer built from your own transactions, income and EMIs — not generic tips.'],
   [<FiTag key="i" />, 'Smart categorisation', 'Type “Uber to office” or “Netflix” and FinBuddy files it in the right category for you.'],
   [<FiCalendar key="i" />, 'Loans & EMIs, handled', 'Track every EMI with start and end dates, see months remaining, and watch them roll into your monthly budget.'],
   [<FiActivity key="i" />, 'A monthly health score', 'Savings rate, EMI load and spending distilled into one score — so you know at a glance how this month is going.'],
   [<FiLock key="i" />, 'Private by design', 'Passwords are hashed with bcrypt and every account only ever sees its own data.'],
-  [<FiSmartphone key="i" />, 'Beautiful everywhere', 'A calm, focused interface that feels just as good on your phone as on a big screen.'],
 ];
 
 function About() {
   const { user } = useAuth();
   const primary = user ? { to: '/dashboard', label: 'Open dashboard' } : { to: '/register', label: 'Start free' };
+  const revealRef = useReveal();
 
   return (
-    <div className="lp">
+    <div className="lp" ref={revealRef}>
       <div className="lp-wrap">
         <nav className="lp-nav">
           <Brand />
@@ -82,13 +86,30 @@ function About() {
           </div>
         </section>
 
+      </div>
+
+      {/* ---------------- Marquee ---------------- */}
+      <div className="lp-marquee" aria-hidden="true">
+        <div className="lp-marquee-track">
+          {[...MARQUEE, ...MARQUEE].map((m, i) => <span key={i}>{m}<i>✦</i></span>)}
+        </div>
+      </div>
+
+      <div className="lp-wrap">
+        {/* ---------------- Promise strip ---------------- */}
+        <section className="lp-promise">
+          {[['₹0', 'to use, forever'], ['0', 'ads or bank logins'], ['60s', 'to set up'], ['1 tap', 'to hide every amount']].map(([k, v], i) => (
+            <div key={v} className={`reveal d${i}`}><div className="serif grad-text k">{k}</div><div className="v">{v}</div></div>
+          ))}
+        </section>
+
         {/* ---------------- Features ---------------- */}
         <section className="lp-section">
-          <div className="eyebrow">Why FinBuddy</div>
-          <h2 className="lp-h2">Everything you need.<br /><span className="muted">Nothing you don't.</span></h2>
+          <div className="fb-ornament reveal">Why FinBuddy</div>
+          <h2 className="lp-h2 reveal">Everything you need.<br /><span className="muted">Nothing you don't.</span></h2>
           <div className="lp-features">
             {FEATURES.map(([icon, title, text]) => (
-              <div key={title} className="fb-card lp-feature">
+              <div key={title} className="fb-card lift lp-feature reveal">
                 <div className="ico">{icon}</div>
                 <h3>{title}</h3>
                 <p>{text}</p>
@@ -99,17 +120,17 @@ function About() {
 
         {/* ---------------- How it works ---------------- */}
         <section className="lp-section">
-          <div className="eyebrow">How it works</div>
-          <h2 className="lp-h2">Three steps to clarity.</h2>
+          <div className="fb-ornament reveal">How it works</div>
+          <h2 className="lp-h2 reveal">Three steps to clarity.</h2>
           <div className="lp-steps">
-            <div className="lp-step"><div className="n">01</div><h3>Set your income</h3><p>Add your salary and any passive income once — it's counted every month.</p></div>
-            <div className="lp-step"><div className="n">02</div><h3>Log what you spend</h3><p>Add expenses and EMIs in seconds. Categories are picked for you.</p></div>
-            <div className="lp-step"><div className="n">03</div><h3>Ask, learn, improve</h3><p>See your monthly picture and ask the AI how to do better next month.</p></div>
+            <div className="lp-step reveal"><div className="n">01</div><h3>Set your income</h3><p>Add your salary and any passive income once — it's counted every month.</p></div>
+            <div className="lp-step reveal"><div className="n">02</div><h3>Log what you spend</h3><p>Add expenses and EMIs in seconds. Categories are picked for you.</p></div>
+            <div className="lp-step reveal"><div className="n">03</div><h3>Ask, learn, improve</h3><p>See your monthly picture and ask the AI how to do better next month.</p></div>
           </div>
         </section>
 
         {/* ---------------- Final CTA ---------------- */}
-        <section className="lp-final">
+        <section className="lp-final reveal">
           <h2 className="lp-h2">Make this the month<br />you <em className="grad-text">take control</em>.</h2>
           <p className="muted mb-4">Free, private and ready in under a minute.</p>
           <Link className="fb-btn fb-btn-lg" to={primary.to}>{primary.label} <FiArrowRight /></Link>

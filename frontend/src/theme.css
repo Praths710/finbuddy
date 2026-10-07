@@ -401,3 +401,70 @@ button.fb-chip:hover { color: var(--text); border-color: rgba(232, 207, 143, 0.5
 .fb-chip.danger { color: var(--neg); border-color: rgba(241, 154, 143, 0.35); background: rgba(241, 154, 143, 0.08); }
 .fb-chip.warn { color: var(--warn); border-color: rgba(242, 193, 78, 0.35); background: rgba(242, 193, 78, 0.08); }
 .fb-progress.near > div { background: linear-gradient(90deg, #f2c14e, #e0962b); }
+
+/* ==========================================================================
+   Luxe polish
+   ========================================================================== */
+/* Film grain — gives the black real depth instead of flat #000 */
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  pointer-events: none;
+  z-index: 3000;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Slow light sweep across gold text */
+.grad-text {
+  background-size: 220% 100%;
+  animation: fb-sheen 7s ease-in-out infinite;
+}
+@keyframes fb-sheen {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Gold hairline along the top edge of every card */
+.fb-card::before {
+  content: '';
+  position: absolute; left: 18px; right: 18px; top: -1px; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(232, 207, 143, 0.45), transparent);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* Cards lift and warm up on hover */
+.fb-card.lift { transition: transform 0.25s cubic-bezier(.2,.8,.2,1), border-color 0.25s, box-shadow 0.25s; }
+.fb-card.lift:hover {
+  transform: translateY(-3px);
+  border-color: rgba(232, 207, 143, 0.28);
+  box-shadow: 0 1px 0 rgba(255, 236, 190, 0.06) inset, 0 30px 60px -28px rgba(212, 175, 55, 0.35);
+}
+
+/* Primary button: moving highlight on hover */
+.fb-btn { position: relative; overflow: hidden; isolation: isolate; }
+.fb-btn::after {
+  content: '';
+  position: absolute; top: 0; bottom: 0; left: -60%; width: 40%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.6s ease;
+  z-index: -1;
+}
+.fb-btn:hover::after { left: 130%; }
+.fb-btn-ghost::after { display: none; }
+
+/* Scroll reveal (paired with useReveal) */
+.reveal { opacity: 0; transform: translateY(26px); transition: opacity 0.8s cubic-bezier(.2,.8,.2,1), transform 0.8s cubic-bezier(.2,.8,.2,1); }
+.reveal.in { opacity: 1; transform: none; }
+.reveal.d1 { transition-delay: 0.08s; } .reveal.d2 { transition-delay: 0.16s; } .reveal.d3 { transition-delay: 0.24s; }
+
+/* Ornamental divider */
+.fb-ornament { display: flex; align-items: center; gap: 14px; color: var(--gold); font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase; }
+.fb-ornament::before, .fb-ornament::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(232, 207, 143, 0.4), transparent); }
+
+/* Horizontal scroll areas fade at the edges */
+.fb-seg { mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%); -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%); }
+@media (min-width: 900px) { .fb-seg { mask-image: none; -webkit-mask-image: none; } }

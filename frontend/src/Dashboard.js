@@ -318,7 +318,7 @@ function NetCard({ stats, prev, month, baseIncome, isCurrent, onSetIncome }) {
           </span>
         )}
       </div>
-      <div className={`serif hero-net num ${stats.net < 0 ? 'neg' : ''}`}>{money(net)}</div>
+      <div className={`serif hero-net num ${stats.net < 0 ? 'neg' : 'grad-text'}`}>{money(net)}</div>
       {baseIncome > 0 || stats.income > 0 ? (
         <>
           <div className="d-flex justify-content-between small muted mb-2 mt-3">
@@ -369,7 +369,7 @@ function ScoreRing({ score }) {
 
 function Stat({ icon, tint, label, value, sub, className = '' }) {
   return (
-    <div className={`fb-card stat fb-fade-in ${className}`}>
+    <div className={`fb-card stat lift fb-fade-in ${className}`}>
       <div className="icon" style={{ background: `${tint}1f`, color: tint }}>{icon}</div>
       <div className="small muted">{label}</div>
       <div className="v num">{value}</div>
@@ -703,7 +703,7 @@ function Budgets({ usage, month, onEdit, onDelete, onAdd }) {
         <div className={`fb-progress mt-3 ${spent > limit ? 'over' : ''}`}><div style={{ width: `${Math.min(100, (spent / limit) * 100)}%` }} /></div>
       </div>
       <div className="budget-grid">
-        {usage.map((b) => <div key={b.id} className="fb-card"><BudgetBar b={b} onEdit={onEdit} onDelete={onDelete} /></div>)}
+        {usage.map((b) => <div key={b.id} className="fb-card lift"><BudgetBar b={b} onEdit={onEdit} onDelete={onDelete} /></div>)}
       </div>
     </div>
   );
@@ -728,7 +728,7 @@ function Goals({ goals, onAdd, onEdit, onContribute, onDelete }) {
         const done = left <= 0;
         const r = 34, c = 2 * Math.PI * r;
         return (
-          <div key={g.id} className={`fb-card ${done ? 'fb-card-hero' : ''}`}>
+          <div key={g.id} className={`fb-card lift ${done ? 'fb-card-hero' : ''}`}>
             <div className="d-flex gap-3 align-items-center">
               <div className="goal-ring">
                 <svg width="84" height="84" viewBox="0 0 84 84" aria-hidden="true">
@@ -786,7 +786,7 @@ function Loans({ loans, month, onEdit, onDelete, onAdd }) {
         const total = loan.end_date ? Math.max(1, monthsBetween(loan.start_date, loan.end_date) + 1) : null;
         const done = total ? Math.min(total, Math.max(0, monthsBetween(loan.start_date, now) + 1)) : null;
         return (
-          <div key={loan.id} className="fb-card">
+          <div key={loan.id} className="fb-card lift">
             <div className="d-flex justify-content-between align-items-start gap-2">
               <div style={{ minWidth: 0 }}>
                 <div className="fw-semibold fb-ellipsis" style={{ fontSize: 16 }}>{loan.name}</div>
