@@ -6,9 +6,12 @@ from sqlalchemy.orm import sessionmaker, Session
 # Use DATABASE_URL from environment, fallback to SQLite for local dev
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./finmind.db")
 
-# Fix for Render's PostgreSQL URL (starts with postgres://)
-if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
-    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
+# Render gives postgres:// or postgresql:// URLs; name the psycopg2 driver
+# explicitly, since newer SQLAlchemy versions default to psycopg (v3) instead.
+for prefix in ("postgres://", "postgresql://"):
+    if SQLALCHEMY_DATABASE_URL.startswith(prefix):
+        SQLALCHEMY_DATABASE_URL = "postgresql+psycopg2://" + SQLALCHEMY_DATABASE_URL[len(prefix):]
+        break
 
 # Create engine with increased pool size to handle concurrent requests
 engine = create_engine(
