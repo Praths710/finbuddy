@@ -1,317 +1,150 @@
-import React, { useState, useRef, useEffect } from 'react';
-import {
-  Row,
-  Col,
-  Card,
-  Form,
-  Button,
-  Spinner,
-  Alert,
-  Badge
-} from 'react-bootstrap';
-import {
-  FaRobot,
-  FaUser,
-  FaChartLine,
-  FaExclamationTriangle,
-  FaSmile,
-  FaFrown,
-  FaMeh,
-  FaTimes,
-  FaComments
-} from 'react-icons/fa';
+import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
-import { useAuth } from '../AuthContext';
+import { FiX, FiArrowUp, FiTrendingDown, FiPieChart, FiTarget, FiCalendar, FiRotateCcw } from 'react-icons/fi';
+import { HiSparkles } from 'react-icons/hi2';
 import { API_BASE } from '../config';
+import { apiError } from '../finance';
 import './AIChat.css';
 
+const SUGGESTIONS = [
+  [<FiPieChart key="i" />, 'Where did most of my money go this month?'],
+  [<FiTrendingDown key="i" />, 'How can I cut my spending by 10%?'],
+  [<FiCalendar key="i" />, 'Compare this month with last month'],
+  [<FiTarget key="i" />, 'How much can I safely save each month?'],
+];
 
-const AIChat = ({ onClose }) => {
-  const { user } = useAuth();
-  const [messages, setMessages] = useState([
-    {
-      id: 'welcome',
-      role: 'ai',
-      content: `Hi ${user?.full_name || 'there'}! I'm your FinBuddy AI assistant. Ask me anything about your spending, loans, or finances. For example:
-      • "How much did I spend on groceries last month?"
-      • "What's my emotional spending pattern?"
-      • "Compare my spending this month vs last month"
-      • "Give me financial advice based on my habits"`,
-      timestamp: new Date()
+// Inline **bold** → <strong>
+function inline(text, key) {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+    part.startsWith('**') && part.endsWith('**')
+      ? <strong key={`${key}-${i}`}>{part.slice(2, -2)}</strong>
+      : <React.Fragment key={`${key}-${i}`}>{part}</React.Fragment>);
+}
+
+// Minimal markdown: paragraphs, bullet lists, numbered lists, bold, headings as bold.
+function Markdown({ text }) {
+  const blocks = [];
+  let list = null;
+  text.split('\n').forEach((raw, i) => {
+    const line = raw.trim();
+    const bullet = line.match(/^(?:[-*•]|\d+[.)])\s+(.*)$/);
+    if (bullet) {
+      if (!list) { list = []; blocks.push({ type: 'ul', items: list }); }
+      list.push(bullet[1]);
+      return;
     }
-  ]);
+    list = null;
+    if (!line) return;
+    blocks.push({ type: 'p', text: line.replace(/^#{1,6}\s+(.*)$/, '**$1**') });
+  });
+  return blocks.map((b, i) => b.type === 'ul'
+    ? <ul key={i}>{b.items.map((it, j) => <li key={j}>{inline(it, `${i}-${j}`)}</li>)}</ul>
+    : <p key={i}>{inline(b.text, i)}</p>);
+}
+
+function AIChat({ open, onClose, user, health }) {
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [showInsights, setShowInsights] = useState(false);
-  const [insights, setInsights] = useState(null);
-  const messagesEndRef = useRef(null);
-
-  // Auto-scroll to bottom
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  const bodyRef = useRef(null);
+  const inputRef = useRef(null);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    bodyRef.current?.scrollTo({ top: bodyRef.current.scrollHeight });
+  }, [messages, loading]);
 
-  // Load initial insights
   useEffect(() => {
-    fetchInsights();
-  }, []);
+    if (!open) return undefined;
+    const t = setTimeout(() => inputRef.current?.focus(), 300);
+    const onKey = (e) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => { clearTimeout(t); window.removeEventListener('keydown', onKey); };
+  }, [open, onClose]);
 
-  const fetchInsights = async () => {
-    try {
-      const res = await axios.get(`${API_BASE}/ai/insights`);
-      setInsights(res.data);
-    } catch (err) {
-      console.error('Failed to fetch insights:', err);
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!input.trim() || loading) return;
-
-    const userMessage = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: input,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
+  const send = async (text) => {
+    const query = (text ?? input).trim();
+    if (!query || loading) return;
+    setMessages((m) => [...m, { role: 'user', content: query }]);
     setInput('');
     setLoading(true);
-    setError(null);
-
     try {
-      const res = await axios.post(`${API_BASE}/ai/chat`, {
-        query: input
-      });
-
-      const aiMessage = {
-        id: (Date.now() + 1).toString(),
+      const res = await axios.post(`${API_BASE}/ai/chat`, { query });
+      setMessages((m) => [...m, {
         role: 'ai',
-        content: formatAIResponse(res.data),
-        analysis: res.data.analysis,
-        advice: res.data.advice,
-        emotionalInsights: res.data.emotional_insights,
-        healthScore: res.data.health_score,
-        timestamp: new Date()
-      };
-
-      setMessages(prev => [...prev, aiMessage]);
-      
-      // Refresh insights
-      fetchInsights();
-      
+        error: Boolean(res.data.error),
+        content: res.data.message || "I couldn't come up with an answer — try rephrasing?",
+      }]);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to get response. Please try again.');
-      console.error('Chat error:', err);
+      setMessages((m) => [...m, { role: 'ai', error: true, content: apiError(err, "I couldn't reach the assistant. Please try again.") }]);
     } finally {
       setLoading(false);
     }
   };
 
-  const formatAIResponse = (data) => {
-    if (data.error) {
-      return data.message || 'Sorry, I encountered an error.';
-    }
-
-    let response = '';
-
-    if (data.analysis) {
-      if (data.analysis.total !== undefined) {
-        response += `💰 **Spending Analysis**\n`;
-        response += `Total: ₹${data.analysis.total.toFixed(2)}\n`;
-        response += `Daily average: ₹${data.analysis.daily_average.toFixed(2)}\n`;
-        
-        if (data.analysis.top_categories?.length > 0) {
-          response += `\n📊 **Top Categories**\n`;
-          data.analysis.top_categories.forEach(([cat, amount]) => {
-            response += `• ${cat}: ₹${amount.toFixed(2)}\n`;
-          });
-        }
-      }
-      
-      if (data.analysis.change !== undefined) {
-        response += `\n📈 **Comparison**\n`;
-        const trend = data.analysis.change > 0 ? '📈' : '📉';
-        response += `${trend} ${Math.abs(data.analysis.percent_change).toFixed(1)}% (₹${Math.abs(data.analysis.change).toFixed(2)})\n`;
-      }
-    }
-
-    if (data.emotional_insights?.insights?.length > 0) {
-      response += `\n🧠 **Emotional Insights**\n`;
-      data.emotional_insights.insights.forEach(insight => {
-        const icon = insight.severity === 'high' ? '🔴' : insight.severity === 'medium' ? '🟡' : '🟢';
-        response += `${icon} ${insight.message}\n`;
-      });
-    }
-
-    if (data.advice?.advice) {
-      response += `\n💡 **Financial Advice**\n${data.advice.advice}\n`;
-    }
-
-    if (data.health_score) {
-      response += `\n🏥 **Financial Health Score**\n`;
-      response += `${data.health_score.score}/100 - ${data.health_score.rating}\n`;
-    }
-
-    return response || data.message || "I've analyzed your request. Is there anything specific you'd like to know?";
-  };
-
-  const getEmotionIcon = (rating) => {
-    switch(rating?.toLowerCase()) {
-      case 'excellent': return <FaSmile className="text-success" />;
-      case 'good': return <FaSmile className="text-info" />;
-      case 'fair': return <FaMeh className="text-warning" />;
-      case 'needs improvement': return <FaFrown className="text-danger" />;
-      default: return null;
+  const onKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      send();
     }
   };
+
+  const first = (user?.full_name || '').split(' ')[0];
 
   return (
-    <Card className="ai-chat-card">
-      <Card.Header className="d-flex justify-content-between align-items-center">
-        <div>
-          <FaRobot className="me-2" />
-          <strong>FinBuddy AI Assistant</strong>
-          <Badge bg="info" className="ms-2">AI-powered</Badge>
-        </div>
-        <div>
-          <Button
-            variant="outline-light"
-            size="sm"
-            className="me-2"
-            onClick={() => setShowInsights(!showInsights)}
-          >
-            <FaChartLine /> Insights
-          </Button>
-          <Button variant="outline-light" size="sm" onClick={onClose}>
-            <FaTimes />
-          </Button>
-        </div>
-      </Card.Header>
-
-      <Card.Body>
-        {showInsights && insights && (
-          <div className="insights-panel mb-3 p-3">
-            <h6>Quick Insights</h6>
-            <Row>
-              <Col xs={6}>
-                <small>Total Spent</small>
-                <div className="fw-bold">₹{insights.total_spent?.toFixed(2)}</div>
-              </Col>
-              <Col xs={6}>
-                <small>Health Score</small>
-                <div className="fw-bold">
-                  {getEmotionIcon(insights.health_score?.rating)}
-                  {insights.health_score?.score}/100
-                </div>
-              </Col>
-            </Row>
-            {insights.top_categories?.length > 0 && (
-              <div className="mt-2">
-                <small>Top Categories</small>
-                {insights.top_categories.slice(0, 3).map(([cat, amt], i) => (
-                  <div key={i} className="d-flex justify-content-between">
-                    <span>{cat}</span>
-                    <span>₹{Math.abs(amt).toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+    <>
+      <div className={`ai-scrim ${open ? 'open' : ''}`} onClick={onClose} />
+      <aside className={`ai-drawer ${open ? 'open' : ''}`} aria-hidden={!open} aria-label="FinBuddy AI assistant">
+        <div className="ai-head">
+          <div className="ai-orb"><HiSparkles /></div>
+          <div className="flex-grow-1">
+            <div className="ai-title">FinBuddy AI</div>
+            <div className="ai-status">Reads your own numbers</div>
           </div>
-        )}
+          {health && <span className="fb-chip violet" title="Financial health score this month">{health.score}/100</span>}
+          {messages.length > 0 && (
+            <button className="fb-icon-btn" onClick={() => setMessages([])} aria-label="New conversation" title="New conversation"><FiRotateCcw /></button>
+          )}
+          <button className="fb-icon-btn" onClick={onClose} aria-label="Close"><FiX /></button>
+        </div>
 
-        <div className="chat-messages">
-          {messages.map(msg => (
-            <div
-              key={msg.id}
-              className={`message ${msg.role === 'user' ? 'user-message' : 'ai-message'}`}
-            >
-              <div className="message-icon">
-                {msg.role === 'user' ? <FaUser /> : <FaRobot />}
-              </div>
-              <div className="message-content">
-                <div className="message-header">
-                  <strong>{msg.role === 'user' ? 'You' : 'FinBuddy AI'}</strong>
-                  <small className="text-muted ms-2">
-                    {new Date(msg.timestamp).toLocaleTimeString()}
-                  </small>
-                </div>
-                <div className="message-text" style={{ whiteSpace: 'pre-line' }}>
-                  {msg.content}
-                </div>
-                
-                {msg.emotionalInsights?.insights?.length > 0 && (
-                  <div className="emotional-tags mt-2">
-                    {msg.emotionalInsights.insights.map((insight, i) => (
-                      <Badge
-                        key={i}
-                        bg={insight.severity === 'high' ? 'danger' : insight.severity === 'medium' ? 'warning' : 'info'}
-                        className="me-1"
-                      >
-                        {insight.type}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-          
-          {loading && (
-            <div className="message ai-message">
-              <div className="message-icon">
-                <FaRobot />
-              </div>
-              <div className="message-content">
-                <Spinner animation="border" size="sm" /> Thinking...
+        <div className="ai-body" ref={bodyRef}>
+          {messages.length === 0 && (
+            <div className="ai-intro">
+              <div className="ai-orb mx-auto" style={{ width: 52, height: 52, borderRadius: 16, fontSize: 22 }}><HiSparkles /></div>
+              <h3>Hi{first ? ` ${first}` : ''}, ask me anything</h3>
+              <div className="small muted">I read your own numbers to answer — spending, income, EMIs and trends.</div>
+              <div className="ai-suggest">
+                {SUGGESTIONS.map(([icon, q]) => (
+                  <button key={q} onClick={() => send(q)}>{icon}{q}</button>
+                ))}
               </div>
             </div>
           )}
-          
-          <div ref={messagesEndRef} />
+          {messages.map((m, i) => (
+            <div key={i} className={`ai-msg ${m.role} ${m.error ? 'error' : ''}`}>
+              {m.role === 'ai' && <div className="ai-mini"><HiSparkles /></div>}
+              <div className="ai-bubble">{m.role === 'ai' ? <Markdown text={m.content} /> : m.content}</div>
+            </div>
+          ))}
+          {loading && (
+            <div className="ai-msg ai">
+              <div className="ai-mini"><HiSparkles /></div>
+              <div className="ai-bubble"><span className="ai-typing"><span /><span /><span /></span></div>
+            </div>
+          )}
         </div>
 
-        {error && (
-          <Alert variant="danger" className="mt-3" dismissible onClose={() => setError(null)}>
-            <FaExclamationTriangle className="me-2" />
-            {error}
-          </Alert>
-        )}
-
-        <Form onSubmit={handleSubmit} className="mt-3">
-          <Form.Group className="d-flex">
-            <Form.Control
-              type="text"
-              placeholder="Ask about your spending, loans, or get advice..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              disabled={loading}
-              className="me-2"
-            />
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={loading || !input.trim()}
-            >
-              {loading ? <Spinner animation="border" size="sm" /> : 'Send'}
-            </Button>
-          </Form.Group>
-        </Form>
-
-        <div className="mt-2 text-muted small">
-          <FaComments className="me-1" />
-          Try: "How much did I spend on dining?", "Any emotional spending patterns?", "Compare last two months"
+        <div className="ai-foot">
+          <form className="ai-input" onSubmit={(e) => { e.preventDefault(); send(); }}>
+            <textarea ref={inputRef} rows={1} placeholder="Ask about your money…" value={input}
+              onChange={(e) => setInput(e.target.value)} onKeyDown={onKeyDown} disabled={loading} maxLength={1000} />
+            <button className="fb-btn ai-send" type="submit" disabled={loading || !input.trim()} aria-label="Send"><FiArrowUp /></button>
+          </form>
+          <div className="ai-disclaimer">AI can make mistakes. General guidance, not licensed financial advice.</div>
         </div>
-      </Card.Body>
-    </Card>
+      </aside>
+    </>
   );
-};
+}
 
 export default AIChat;

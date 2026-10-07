@@ -6,7 +6,6 @@ import Register from './Register';
 import Dashboard from './Dashboard';
 import About from './About';
 import ProtectedRoute from './ProtectedRoute';
-import 'bootstrap/dist/css/bootstrap.min.css';
 
 function App() {
   return (

@@ -1,79 +1,73 @@
 import React, { useState } from 'react';
-import { useAuth } from './AuthContext';
-import { Container, Form, Button, Card, Alert } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
+import { FiAlertCircle, FiArrowRight, FiEye, FiEyeOff } from 'react-icons/fi';
+import { useAuth } from './AuthContext';
+import AuthShell from './AuthShell';
+import { Spinner, useSlowFlag } from './components/ui';
+import { apiError } from './finance';
+
+const tooLong = (pw) => new TextEncoder().encode(pw).length > 72;
 
 function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const slow = useSlowFlag(busy);
   const { login } = useAuth();
   const navigate = useNavigate();
-
-  const handlePasswordChange = (e) => {
-    const val = e.target.value;
-    // Check byte length (UTF-8)
-    const byteLen = new TextEncoder().encode(val).length;
-    if (byteLen > 72) {
-      setError("Password too long (max 72 bytes). Please shorten it.");
-    } else {
-      setError('');
-    }
-    setPassword(val);
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    // Re-check byte length before sending
-    const byteLen = new TextEncoder().encode(password).length;
-    if (byteLen > 72) {
-      setError("Password too long (max 72 bytes). Please shorten it.");
+    if (tooLong(password)) {
+      setError('Password is too long (max 72 bytes).');
       return;
     }
+    setBusy(true);
     try {
-      await login(email, password);
+      await login(email.trim(), password);
       navigate('/dashboard');
     } catch (err) {
-      const message = err.response?.data?.detail || err.message || 'Login failed';
-      setError(message);
+      setError(err.response?.status === 401 ? 'Incorrect email or password.' : apiError(err, 'Sign in failed.'));
+    } finally {
+      setBusy(false);
     }
   };
 
   return (
-    <Container className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
-      <Card style={{ width: '400px' }} className="p-4">
-        <h2 className="text-center mb-4">Login</h2>
-        {error && <Alert variant="danger">{error}</Alert>}
-        <Form onSubmit={handleSubmit}>
-          <Form.Group className="mb-3">
-            <Form.Label>Email</Form.Label>
-            <Form.Control
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </Form.Group>
-          <Form.Group className="mb-3">
-            <Form.Label>Password</Form.Label>
-            <Form.Control
-              type="password"
-              value={password}
-              onChange={handlePasswordChange}
-              required
-              maxLength="72"
-            />
-          </Form.Group>
-          <Button variant="primary" type="submit" className="w-100">
-            Login
-          </Button>
-        </Form>
-        <div className="text-center mt-3">
-          Don't have an account? <Link to="/register">Register</Link>
+    <AuthShell
+      eyebrow="Welcome back"
+      title="Sign in"
+      subtitle="Pick up right where you left off."
+      footer={<>New to FinBuddy? <Link to="/register">Create an account</Link></>}
+    >
+      {error && <div className="auth-error"><FiAlertCircle /><span>{error}</span></div>}
+      <form onSubmit={handleSubmit} noValidate={false}>
+        <div className="auth-field">
+          <label className="fb-label" htmlFor="email">Email</label>
+          <input id="email" className="fb-input" type="email" autoComplete="email" placeholder="you@example.com"
+            value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
         </div>
-      </Card>
-    </Container>
+        <div className="auth-field">
+          <label className="fb-label" htmlFor="password">Password</label>
+          <div className="fb-input-wrap">
+            <input id="password" className="fb-input" type={showPw ? 'text' : 'password'} autoComplete="current-password"
+              placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required
+              style={{ paddingRight: 48 }} />
+            <button type="button" className="fb-icon-btn suffix-btn" onClick={() => setShowPw((s) => !s)}
+              aria-label={showPw ? 'Hide password' : 'Show password'}>
+              {showPw ? <FiEyeOff /> : <FiEye />}
+            </button>
+          </div>
+        </div>
+        <button className="fb-btn fb-btn-lg fb-btn-block mt-2" type="submit" disabled={busy}>
+          {busy ? <><Spinner /> Signing in…</> : <>Sign in <FiArrowRight /></>}
+        </button>
+        {slow && <div className="auth-hint">Waking up the server — the first sign-in can take up to a minute.</div>}
+      </form>
+    </AuthShell>
   );
 }
 

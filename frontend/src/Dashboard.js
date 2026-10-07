@@ -1,867 +1,867 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import { Modal } from 'react-bootstrap';
+import {
+  FiChevronLeft, FiChevronRight, FiLogOut, FiPlus, FiSearch, FiEdit2, FiTrash2, FiArrowDownLeft,
+  FiArrowUpRight, FiCreditCard, FiPercent, FiPieChart, FiList, FiSettings, FiGrid, FiCalendar, FiInbox,
+  FiUser, FiTag,
+} from 'react-icons/fi';
+import { HiSparkles } from 'react-icons/hi2';
+import {
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell,
+} from 'recharts';
 import { API_BASE } from './config';
-import { Container, Row, Col, Card, Form, Button, Tabs, Tab, Modal, ProgressBar, Navbar } from 'react-bootstrap';
-import { FaMoneyBillWave, FaCoins, FaCreditCard, FaBalanceScale, FaChartLine, FaSignOutAlt, FaRobot } from 'react-icons/fa';
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useAuth } from './AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
-import AIChat from './components/AIChat'; // Import AI chat component
+import AIChat from './components/AIChat';
+import { Brand, Toasts, useToasts, useCountUp, Spinner } from './components/ui';
+import {
+  money, compactMoney, monthStats, healthScore, currentMonthKey, shiftMonth, monthLabel, monthKey,
+  isIncomeTx, isIncomeCategory, colorFor, greeting, initials, loanActiveIn, apiError,
+} from './finance';
+import './Dashboard.css';
 
-// Pure black background – no stars
-const themeStyles = `
-  body {
-    background: #000000 !important;
-    color: #e0e0e0;
-    font-family: 'Arial', sans-serif;
-  }
-  .card {
-    background: #111 !important;
-    border: 2px solid #ffffff !important;
-    border-radius: 15px !important;
-    box-shadow: 0 0 15px rgba(255,255,255,0.2);
-    color: white;
-  }
-  .card.bg-primary {
-    background: #1e3a8a !important;
-    border-color: #3b82f6 !important;
-    box-shadow: 0 0 20px #3b82f6;
-  }
-  .card.bg-success {
-    background: #14532d !important;
-    border-color: #22c55e !important;
-    box-shadow: 0 0 20px #22c55e;
-  }
-  .card.bg-info {
-    background: #1e3a5f !important;
-    border-color: #06b6d4 !important;
-    box-shadow: 0 0 20px #06b6d4;
-  }
-  .card.bg-danger {
-    background: #7f1d1d !important;
-    border-color: #ef4444 !important;
-    box-shadow: 0 0 20px #ef4444;
-  }
-  .card.bg-warning {
-    background: #854d0e !important;
-    border-color: #eab308 !important;
-    box-shadow: 0 0 20px #eab308;
-  }
-  .card.bg-warning .card-title,
-  .card.bg-warning .card-text {
-    color: white !important;
-  }
-  .card.bg-secondary {
-    background: #1e293b !important;
-    border-color: #94a3b8 !important;
-    box-shadow: 0 0 20px #94a3b8;
-  }
-  .transaction-card {
-    background: white !important;
-    border: 1px solid #ddd;
-    border-radius: 20px !important;
-    padding: 15px;
-    margin-bottom: 15px;
-    box-shadow: 0 8px 20px rgba(255,255,255,0.3);
-    color: black !important;
-    transition: transform 0.2s;
-  }
-  .transaction-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 28px rgba(255,255,255,0.5);
-  }
-  .transaction-card .amount {
-    font-size: 1.4rem;
-    font-weight: bold;
-  }
-  .transaction-card .description {
-    font-size: 1.1rem;
-  }
-  .transaction-card .category {
-    color: #555;
-    font-style: italic;
-  }
-  .transaction-card .actions {
-    margin-top: 10px;
-  }
-  .modal-content {
-    background: #222 !important;
-    border: 2px solid white;
-    color: white;
-  }
-  .modal-header, .modal-footer {
-    border-color: #444;
-  }
-  .modal-title {
-    color: white;
-  }
-  .form-label {
-    color: white !important;
-  }
-  .form-control, .form-select {
-    background: #333 !important;
-    border: 1px solid #555 !important;
-    color: white !important;
-  }
-  .form-control::placeholder {
-    color: #aaa;
-  }
-  .nav-tabs .nav-link {
-    color: #ccc;
-    border: 1px solid transparent;
-  }
-  .nav-tabs .nav-link.active {
-    background: #222;
-    color: white;
-    border-color: white white #222 white;
-  }
-  .btn-primary {
-    background: #3b82f6;
-    border-color: #2563eb;
-  }
-  .btn-outline-primary {
-    color: #3b82f6;
-    border-color: #3b82f6;
-  }
-  .btn-outline-danger {
-    color: #ef4444;
-    border-color: #ef4444;
-  }
-  .progress {
-    background: #333;
-    border: 1px solid white;
-    height: 25px;
-    border-radius: 15px;
-  }
-  .progress-bar {
-    background: linear-gradient(90deg, #3b82f6, #a855f7);
-    font-weight: bold;
-  }
-  /* Logo styling */
-  .navbar-logo {
-    height: 40px;
-    width: auto;
-    margin-right: 10px;
-    filter: drop-shadow(0 0 5px #3b82f6);
-  }
-`;
+const todayLocal = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+// Dates go to the API as naive local noon so they never slip a day across time zones.
+const toApiDate = (yyyyMmDd) => `${yyyyMmDd}T12:00:00`;
+const fromApiDate = (iso) => new Date(`${iso.slice(0, 10)}T00:00:00`);
+const fmtDay = (iso, opts = { day: 'numeric', month: 'short' }) => fromApiDate(iso).toLocaleDateString('en-IN', opts);
 
-
-
+/* =====================================================================
+   Dashboard
+   ===================================================================== */
 function Dashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [toasts, toast] = useToasts();
 
   const [transactions, setTransactions] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loans, setLoans] = useState([]);
+  const [income, setIncome] = useState({ active: 0, passive: 0 });
   const [loading, setLoading] = useState(true);
-  const [showAIChat, setShowAIChat] = useState(false); // State for AI chat
 
-  // Income state: start as empty string
-  const [activeIncome, setActiveIncome] = useState('');
-  const [passiveIncome, setPassiveIncome] = useState('');
+  const [month, setMonth] = useState(currentMonthKey());
+  const [tab, setTab] = useState('overview');
+  const [aiOpen, setAiOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [txModal, setTxModal] = useState(null); // null | {} (new) | tx (edit)
+  const [loanModal, setLoanModal] = useState(null);
+  const [confirm, setConfirm] = useState(null); // { title, body, onYes }
 
-  const [form, setForm] = useState({
-    amount: '',
-    description: '',
-    category_id: '',
-    date: new Date().toISOString().slice(0, 10)
-  });
-  const [loanForm, setLoanForm] = useState({
-    name: '',
-    amount: '',
-    start_date: new Date().toISOString().slice(0, 10),
-    end_date: '',
-    description: ''
-  });
-  const [suggestedCat, setSuggestedCat] = useState(null);
-  const [editingId, setEditingId] = useState(null);
-  const [editingLoanId, setEditingLoanId] = useState(null);
+  const loadTransactions = useCallback(
+    () => axios.get(`${API_BASE}/transactions/?limit=5000`).then((r) => setTransactions(r.data)), []);
+  const loadLoans = useCallback(
+    () => axios.get(`${API_BASE}/loans/?limit=500`).then((r) => setLoans(r.data)), []);
+  const loadCategories = useCallback(
+    () => axios.get(`${API_BASE}/categories/?limit=500`).then((r) => setCategories(r.data)), []);
 
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [newCategoryDesc, setNewCategoryDesc] = useState('');
-
-  const [showModal, setShowModal] = useState(false);
-  const [modalMode, setModalMode] = useState('add');
-
-  // Log loans whenever they change (for debugging)
   useEffect(() => {
-    console.log('Loans array updated:', loans);
-  }, [loans]);
+    let alive = true;
+    Promise.all([
+      loadTransactions(),
+      loadLoans(),
+      loadCategories(),
+      axios.get(`${API_BASE}/user/income`).then((r) => {
+        if (alive) setIncome({ active: r.data.active_income || 0, passive: r.data.passive_income || 0 });
+      }),
+    ])
+      .catch((err) => toast(apiError(err, "Couldn't load your data."), 'error'))
+      .finally(() => alive && setLoading(false));
+    return () => { alive = false; };
+  }, [loadTransactions, loadLoans, loadCategories, toast]);
 
-  // Fetch loans function memoized
-  const fetchLoans = useCallback(() => {
-    console.log('Fetching loans...');
-    axios.get(`${API_BASE}/loans/`)
-      .then(res => {
-        console.log('Loans response:', res.data);
-        setLoans(res.data);
-      })
-      .catch(err => console.error("Error fetching loans", err));
-  }, []);
+  const baseIncome = (income.active || 0) + (income.passive || 0);
+  const stats = useMemo(
+    () => monthStats({ transactions, loans, baseIncome, key: month }),
+    [transactions, loans, baseIncome, month]);
+  const prevStats = useMemo(
+    () => monthStats({ transactions, loans, baseIncome, key: shiftMonth(month, -1) }),
+    [transactions, loans, baseIncome, month]);
+  const health = healthScore(stats);
+  const isCurrent = month === currentMonthKey();
 
-  // Fetch transactions function
-  const fetchTransactions = useCallback(() => {
-    axios.get(`${API_BASE}/transactions/`)
-      .then(res => setTransactions(res.data))
-      .catch(err => console.error("Error fetching transactions", err));
-  }, []);
+  const handleLogout = () => { logout(); navigate('/login'); };
 
-  // Fetch all data when user changes
-  useEffect(() => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const catsRes = await axios.get(`${API_BASE}/categories/`);
-        setCategories(catsRes.data);
-
-        const incomeRes = await axios.get(`${API_BASE}/user/income`);
-        setActiveIncome(incomeRes.data.active_income === 0 ? '' : incomeRes.data.active_income.toString());
-        setPassiveIncome(incomeRes.data.passive_income === 0 ? '' : incomeRes.data.passive_income.toString());
-
-        await Promise.all([
-          fetchTransactions(),
-          fetchLoans()
-        ]);
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [user, fetchTransactions, fetchLoans]);
-
-  // Income handlers
-  const handleActiveChange = (value) => {
-    setActiveIncome(value);
-    const numValue = value === '' ? 0 : parseFloat(value);
-    axios.put(`${API_BASE}/user/income?active=${numValue}&passive=${passiveIncome === '' ? 0 : parseFloat(passiveIncome)}`)
-      .catch(err => console.error("Error updating active income", err));
-  };
-
-  const handlePassiveChange = (value) => {
-    setPassiveIncome(value);
-    const numValue = value === '' ? 0 : parseFloat(value);
-    axios.put(`${API_BASE}/user/income?active=${activeIncome === '' ? 0 : parseFloat(activeIncome)}&passive=${numValue}`)
-      .catch(err => console.error("Error updating passive income", err));
-  };
-
-  const handleDescriptionChange = (e) => {
-    const desc = e.target.value;
-    setForm({ ...form, description: desc });
-    if (desc.length > 2) {
-      axios.get(`${API_BASE}/suggest-category/?description=${encodeURIComponent(desc)}`)
-        .then(res => {
-          if (res.data.suggested_category_id) {
-            setSuggestedCat(res.data);
-            setForm(prev => ({ ...prev, category_id: res.data.suggested_category_id }));
-          } else {
-            setSuggestedCat(null);
-          }
-        });
-    }
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const transactionData = {
-      amount: parseFloat(form.amount),
-      description: form.description,
-      category_id: form.category_id || null,
-      date: new Date(form.date).toISOString()
-    };
-
-    if (editingId) {
-      axios.put(`${API_BASE}/transactions/${editingId}`, transactionData)
-        .then(() => {
-          resetForm();
-          setEditingId(null);
-          setShowModal(false);
-          fetchTransactions();
-        })
-        .catch(err => console.error("Error updating transaction:", err));
-    } else {
-      axios.post(`${API_BASE}/transactions/`, transactionData)
-        .then(() => {
-          resetForm();
-          setShowModal(false);
-          fetchTransactions();
-        })
-        .catch(err => console.error("Error creating transaction:", err));
-    }
-  };
-
-  const resetForm = () => {
-    setForm({
-      amount: '',
-      description: '',
-      category_id: '',
-      date: new Date().toISOString().slice(0, 10)
+  const askDelete = (title, body, url, reload, done) =>
+    setConfirm({
+      title, body,
+      onYes: () => axios.delete(url).then(reload).then(() => toast(done))
+        .catch((err) => toast(apiError(err), 'error')),
     });
-    setSuggestedCat(null);
-  };
-
-  const handleEdit = (transaction) => {
-    setEditingId(transaction.id);
-    setForm({
-      amount: transaction.amount,
-      description: transaction.description,
-      category_id: transaction.category_id || '',
-      date: transaction.date.slice(0, 10)
-    });
-    setModalMode('edit');
-    setShowModal(true);
-    if (transaction.description.length > 2) {
-      axios.get(`${API_BASE}/suggest-category/?description=${encodeURIComponent(transaction.description)}`)
-        .then(res => {
-          if (res.data.suggested_category_id) {
-            setSuggestedCat(res.data);
-          }
-        });
-    }
-  };
-
-  const handleDelete = (id) => {
-    if (window.confirm("Are you sure you want to delete this transaction?")) {
-      axios.delete(`${API_BASE}/transactions/${id}`)
-        .then(() => fetchTransactions())
-        .catch(err => {
-          console.error("Error deleting transaction:", err);
-          alert("Failed to delete transaction.");
-        });
-    }
-  };
-
-  const handleLoanSubmit = (e) => {
-    e.preventDefault();
-    const loanData = {
-      name: loanForm.name,
-      amount: parseFloat(loanForm.amount),
-      start_date: new Date(loanForm.start_date).toISOString(),
-      end_date: loanForm.end_date ? new Date(loanForm.end_date).toISOString() : null,
-      description: loanForm.description || null
-    };
-
-    if (editingLoanId) {
-      axios.put(`${API_BASE}/loans/${editingLoanId}`, loanData)
-        .then(() => {
-          resetLoanForm();
-          setEditingLoanId(null);
-          fetchLoans();
-        })
-        .catch(err => console.error("Error updating loan:", err));
-    } else {
-      axios.post(`${API_BASE}/loans/`, loanData)
-        .then(() => {
-          resetLoanForm();
-          fetchLoans();
-        })
-        .catch(err => console.error("Error creating loan:", err));
-    }
-  };
-
-  const resetLoanForm = () => {
-    setLoanForm({
-      name: '',
-      amount: '',
-      start_date: new Date().toISOString().slice(0, 10),
-      end_date: '',
-      description: ''
-    });
-  };
-
-  const handleEditLoan = (loan) => {
-    setEditingLoanId(loan.id);
-    setLoanForm({
-      name: loan.name,
-      amount: loan.amount,
-      start_date: loan.start_date.slice(0, 10),
-      end_date: loan.end_date ? loan.end_date.slice(0, 10) : '',
-      description: loan.description || ''
-    });
-  };
-
-  const handleDeleteLoan = (id) => {
-    if (window.confirm("Are you sure you want to delete this loan/EMI?")) {
-      axios.delete(`${API_BASE}/loans/${id}`)
-        .then(() => fetchLoans())
-        .catch(err => {
-          console.error("Error deleting loan:", err);
-          alert("Failed to delete loan.");
-        });
-    }
-  };
-
-  const handleAddCategory = (e) => {
-    e.preventDefault();
-    axios.post(`${API_BASE}/categories/`, {
-      name: newCategoryName,
-      description: newCategoryDesc
-    })
-      .then(() => {
-        axios.get(`${API_BASE}/categories/`).then(res => setCategories(res.data));
-        setNewCategoryName('');
-        setNewCategoryDesc('');
-      })
-      .catch(err => console.error("Error adding category", err));
-  };
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-
-  // Calculations
-  const activeNum = activeIncome === '' ? 0 : parseFloat(activeIncome);
-  const passiveNum = passiveIncome === '' ? 0 : parseFloat(passiveIncome);
-
-  const otherIncome = transactions.reduce((acc, tx) => {
-    if (tx.category && tx.category.name.toLowerCase().includes('income')) {
-      acc += tx.amount;
-    }
-    return acc;
-  }, 0);
-
-  const expensesFromTransactions = transactions.reduce((acc, tx) => {
-    if (!tx.category || !tx.category.name.toLowerCase().includes('income')) {
-      acc += tx.amount;
-    }
-    return acc;
-  }, 0);
-
-  const totalEMI = loans.reduce((acc, loan) => acc + loan.amount, 0);
-  const totalExpenses = expensesFromTransactions + totalEMI;
-  const totalIncome = activeNum + passiveNum + otherIncome;
-  const net = totalIncome - totalExpenses;
-  const spentPercent = totalIncome > 0 ? Math.min(100, (totalExpenses / totalIncome) * 100) : 0;
-
-  const expenseByCategory = transactions
-    .filter(tx => !tx.category?.name.toLowerCase().includes('income'))
-    .reduce((acc, tx) => {
-      const catName = tx.category?.name || 'Uncategorized';
-      acc[catName] = (acc[catName] || 0) + tx.amount;
-      return acc;
-    }, {});
-
-  let pieData = Object.entries(expenseByCategory).map(([name, value]) => ({ name, value }));
-  if (totalEMI > 0) {
-    pieData.push({ name: 'Loans/EMI', value: totalEMI });
-  }
-
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AA336A', '#33AA33', '#8884d8', '#82ca9d', '#FF6363'];
-
-  if (loading) {
-    return (
-      <>
-        <style>{themeStyles}</style>
-        <Navbar bg="dark" variant="dark" expand="lg" className="mb-4">
-          <Container>
-            <Link to="/" className="navbar-brand">
-              <img src="/FinBuddy-new.png" alt="FinBuddy Logo" className="navbar-logo" />
-            </Link>
-          </Container>
-        </Navbar>
-        <Container className="text-center py-5">
-          <h3>Loading your dashboard...</h3>
-        </Container>
-      </>
-    );
-  }
 
   return (
     <>
-      <style>{themeStyles}</style>
-      <Navbar bg="dark" variant="dark" expand="lg" className="mb-4">
-        <Container>
-          <Link to="/" className="navbar-brand">
-            <img src="/FinBuddy-new.png" alt="FinBuddy Logo" className="navbar-logo" />
-          </Link>
-          <Navbar.Toggle />
-          <Navbar.Collapse className="justify-content-end">
-            <Navbar.Text className="me-3">
-              Signed in as: {user?.full_name || user?.email}
-            </Navbar.Text>
-            <Button
-              variant="outline-info"
-              className="me-2"
-              onClick={() => setShowAIChat(!showAIChat)}
-            >
-              <FaRobot /> AI Assistant
-            </Button>
-            <Button variant="outline-light" onClick={handleLogout}>
-              <FaSignOutAlt /> Logout
-            </Button>
-          </Navbar.Collapse>
-        </Container>
-      </Navbar>
-
-      <Container className="py-4" data-bs-theme="dark">
-        {/* Summary Cards */}
-        <Row className="mb-4">
-          <Col md={3}>
-            <Card className="text-white bg-primary h-100">
-              <Card.Body>
-                <FaMoneyBillWave size={30} className="mb-2" />
-                <Card.Title>Active Income</Card.Title>
-                <Card.Text className="display-6">₹{activeNum.toFixed(2)}</Card.Text>
-              </Card.Body>
-            </Card>
-          </Col>
-          <Col md={3}>
-            <Card className="text-white bg-success h-100">
-              <Card.Body>
-                <FaCoins size={30} className="mb-2" />
-                <Card.Title>Passive Income</Card.Title>
-                <Card.Text className="display-6">₹{passiveNum.toFixed(2)}</Card.Text>
-              </Card.Body>
-            </Card>
-          </Col>
-          <Col md={3}>
-            <Card className="text-white bg-info h-100">
-              <Card.Body>
-                <FaChartLine size={30} className="mb-2" />
-                <Card.Title>Other Income</Card.Title>
-                <Card.Text className="display-6">₹{otherIncome.toFixed(2)}</Card.Text>
-              </Card.Body>
-            </Card>
-          </Col>
-          <Col md={3}>
-            <Card className="text-white bg-danger h-100">
-              <Card.Body>
-                <FaCreditCard size={30} className="mb-2" />
-                <Card.Title>Expenses</Card.Title>
-                <Card.Text className="display-6">₹{totalExpenses.toFixed(2)}</Card.Text>
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
-
-        {/* Total Income & Net Row */}
-        <Row className="mb-4">
-          <Col md={6}>
-            <Card className="text-white bg-secondary h-100">
-              <Card.Body>
-                <Card.Title>Total Monthly Income</Card.Title>
-                <Card.Text className="display-5">₹{totalIncome.toFixed(2)}</Card.Text>
-                <small>Active + Passive + Other</small>
-              </Card.Body>
-            </Card>
-          </Col>
-          <Col md={6}>
-            <Card className="text-white bg-warning h-100">
-              <Card.Body>
-                <FaBalanceScale size={30} className="mb-2" />
-                <Card.Title>Net</Card.Title>
-                <Card.Text className="display-5">₹{net.toFixed(2)}</Card.Text>
-                <div className="mt-3">
-                  <p className="mb-1">Spent: {spentPercent.toFixed(1)}% of income</p>
-                  <ProgressBar now={spentPercent} label={`${spentPercent.toFixed(0)}%`} />
-                </div>
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
-
-        {/* Income Inputs */}
-        <Row className="mb-4">
-          <Col md={6}>
-            <Card>
-              <Card.Body>
-                <Card.Title>Set Monthly Incomes</Card.Title>
-                <Form>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Active Income (₹)</Form.Label>
-                    <Form.Control
-                      type="number"
-                      value={activeIncome}
-                      onChange={(e) => handleActiveChange(e.target.value)}
-                      placeholder="Enter amount"
-                    />
-                  </Form.Group>
-                  <Form.Group>
-                    <Form.Label>Passive Income (₹)</Form.Label>
-                    <Form.Control
-                      type="number"
-                      value={passiveIncome}
-                      onChange={(e) => handlePassiveChange(e.target.value)}
-                      placeholder="Enter amount"
-                    />
-                  </Form.Group>
-                  <Form.Text className="text-muted">
-                    These amounts are saved to your account.
-                  </Form.Text>
-                </Form>
-              </Card.Body>
-            </Card>
-          </Col>
-          {totalEMI > 0 && (
-            <Col md={6}>
-              <Card>
-                <Card.Body>
-                  <Card.Title>Total Monthly EMI</Card.Title>
-                  <Card.Text className="display-6">₹{totalEMI.toFixed(2)}</Card.Text>
-                </Card.Body>
-              </Card>
-            </Col>
-          )}
-        </Row>
-
-        {/* Tabs */}
-        <Tabs defaultActiveKey="transactions" id="main-tabs" className="mb-3">
-          <Tab eventKey="transactions" title="Transactions">
-            {/* Add Category Form */}
-            <Card className="mb-3">
-              <Card.Body>
-                <Card.Title>Add New Category</Card.Title>
-                <Form onSubmit={handleAddCategory} className="d-flex gap-2">
-                  <Form.Control
-                    type="text"
-                    placeholder="Category name"
-                    value={newCategoryName}
-                    onChange={(e) => setNewCategoryName(e.target.value)}
-                    required
-                  />
-                  <Form.Control
-                    type="text"
-                    placeholder="Description (optional)"
-                    value={newCategoryDesc}
-                    onChange={(e) => setNewCategoryDesc(e.target.value)}
-                  />
-                  <Button type="submit" variant="success">Add</Button>
-                </Form>
-              </Card.Body>
-            </Card>
-
-            <Button
-              variant="primary"
-              onClick={() => {
-                setModalMode('add');
-                resetForm();
-                setEditingId(null);
-                setShowModal(true);
-              }}
-              className="mb-3"
-            >
-              + Add Transaction
-            </Button>
-
-            <Row>
-              {transactions.map(tx => (
-                <Col md={6} lg={4} key={tx.id}>
-                  <div className="transaction-card">
-                    <div className="d-flex justify-content-between align-items-start">
-                      <div>
-                        <span className="badge bg-secondary">{new Date(tx.date).toLocaleDateString()}</span>
-                      </div>
-                      <span className={`amount ${tx.category?.name.toLowerCase().includes('income') ? 'text-success' : 'text-danger'}`}>
-                        ₹{tx.amount.toFixed(2)}
-                      </span>
+      {/* ---------------- Nav ---------------- */}
+      <nav className="fb-nav">
+        <div className="fb-nav-inner">
+          <Brand to="/dashboard" />
+          <div className="ms-auto d-flex align-items-center gap-2">
+            <button className="ai-trigger" onClick={() => setAiOpen(true)}>
+              <HiSparkles className="spark" /> <span className="txt">Ask FinBuddy AI</span>
+            </button>
+            <div className="position-relative">
+              <button className="fb-avatar" onClick={() => setMenuOpen((o) => !o)} aria-label="Account menu">
+                {initials(user)}
+              </button>
+              {menuOpen && (
+                <>
+                  <div className="position-fixed top-0 start-0 w-100 h-100" style={{ zIndex: 1025 }} onClick={() => setMenuOpen(false)} />
+                  <div className="fb-menu">
+                    <div className="fb-menu-head">
+                      <div className="fw-semibold">{user?.full_name || 'Your account'}</div>
+                      <div className="small muted fb-ellipsis">{user?.email}</div>
                     </div>
-                    <div className="description mt-2">{tx.description}</div>
-                    <div className="category">{tx.category?.name || 'Uncategorized'}</div>
-                    <div className="actions mt-2">
-                      <Button size="sm" variant="outline-primary" onClick={() => handleEdit(tx)}>Edit</Button>
-                      <Button size="sm" variant="outline-danger" onClick={() => handleDelete(tx.id)} className="ms-2">Delete</Button>
-                    </div>
+                    <button onClick={() => { setTab('settings'); setMenuOpen(false); }}><FiSettings /> Settings</button>
+                    <button onClick={handleLogout}><FiLogOut /> Sign out</button>
                   </div>
-                </Col>
-              ))}
-            </Row>
-          </Tab>
-
-          <Tab eventKey="loans" title="Loans & EMIs">
-            <Card className="mb-4">
-              <Card.Body>
-                <Card.Title>{editingLoanId ? 'Edit Loan' : 'Add New Loan/EMI'}</Card.Title>
-                <Form onSubmit={handleLoanSubmit}>
-                  <Row>
-                    <Col md={3}>
-                      <Form.Control
-                        type="text"
-                        placeholder="Loan Name"
-                        value={loanForm.name}
-                        onChange={e => setLoanForm({ ...loanForm, name: e.target.value })}
-                        required
-                      />
-                    </Col>
-                    <Col md={2}>
-                      <Form.Control
-                        type="number"
-                        placeholder="Monthly Amount"
-                        value={loanForm.amount}
-                        onChange={e => setLoanForm({ ...loanForm, amount: e.target.value })}
-                        required
-                      />
-                    </Col>
-                    <Col md={2}>
-                      <Form.Control
-                        type="date"
-                        value={loanForm.start_date}
-                        onChange={e => setLoanForm({ ...loanForm, start_date: e.target.value })}
-                      />
-                    </Col>
-                    <Col md={2}>
-                      <Form.Control
-                        type="date"
-                        placeholder="End Date"
-                        value={loanForm.end_date}
-                        onChange={e => setLoanForm({ ...loanForm, end_date: e.target.value })}
-                      />
-                    </Col>
-                    <Col md={2}>
-                      <Form.Control
-                        type="text"
-                        placeholder="Description"
-                        value={loanForm.description}
-                        onChange={e => setLoanForm({ ...loanForm, description: e.target.value })}
-                      />
-                    </Col>
-                    <Col md={1}>
-                      <Button type="submit" variant="primary">
-                        {editingLoanId ? 'Update' : 'Add'}
-                      </Button>
-                      {editingLoanId && (
-                        <Button
-                          variant="secondary"
-                          onClick={() => {
-                            resetLoanForm();
-                            setEditingLoanId(null);
-                          }}
-                          className="mt-2"
-                        >
-                          Cancel
-                        </Button>
-                      )}
-                    </Col>
-                  </Row>
-                </Form>
-              </Card.Body>
-            </Card>
-
-            <h4>Your Loans/EMIs</h4>
-            <Row>
-              {loans.map(loan => (
-                <Col md={6} key={loan.id} className="mb-3">
-                  <Card>
-                    <Card.Body>
-                      <Card.Title>{loan.name}</Card.Title>
-                      <Card.Subtitle className="mb-2 text-muted">₹{loan.amount}/month</Card.Subtitle>
-                      <Card.Text>
-                        Started: {new Date(loan.start_date).toLocaleDateString()}
-                        {loan.end_date && ` • Ends: ${new Date(loan.end_date).toLocaleDateString()}`}
-                        {loan.description && <br />}{loan.description}
-                      </Card.Text>
-                      <Button size="sm" variant="outline-primary" onClick={() => handleEditLoan(loan)}>Edit</Button>
-                      <Button size="sm" variant="outline-danger" onClick={() => handleDeleteLoan(loan.id)} className="ms-2">Delete</Button>
-                    </Card.Body>
-                  </Card>
-                </Col>
-              ))}
-            </Row>
-          </Tab>
-
-          <Tab eventKey="analytics" title="Analytics">
-            <Card>
-              <Card.Body>
-                <Card.Title>Spending Breakdown by Category</Card.Title>
-                {pieData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={400}>
-                    <PieChart>
-                      <Pie
-                        data={pieData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={true}
-                        label={entry => `${entry.name}: ₹${entry.value.toFixed(2)}`}
-                        outerRadius={150}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {pieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => `₹${value.toFixed(2)}`} />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <p>No expense data to display. Add some transactions or loans first!</p>
-                )}
-              </Card.Body>
-            </Card>
-          </Tab>
-        </Tabs>
-
-        {/* Transaction Modal */}
-        <Modal show={showModal} onHide={() => setShowModal(false)}>
-          <Modal.Header closeButton>
-            <Modal.Title>{modalMode === 'add' ? 'Add Transaction' : 'Edit Transaction'}</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <Form onSubmit={handleSubmit}>
-              <Form.Group className="mb-3">
-                <Form.Label>Amount</Form.Label>
-                <Form.Control
-                  type="number"
-                  value={form.amount}
-                  onChange={e => setForm({ ...form, amount: e.target.value })}
-                  required
-                />
-              </Form.Group>
-              <Form.Group className="mb-3">
-                <Form.Label>Description</Form.Label>
-                <Form.Control
-                  type="text"
-                  value={form.description}
-                  onChange={handleDescriptionChange}
-                  required
-                />
-              </Form.Group>
-              <Form.Group className="mb-3">
-                <Form.Label>Date</Form.Label>
-                <Form.Control
-                  type="date"
-                  value={form.date}
-                  onChange={e => setForm({ ...form, date: e.target.value })}
-                />
-              </Form.Group>
-              <Form.Group className="mb-3">
-                <Form.Label>Category</Form.Label>
-                <Form.Select
-                  value={form.category_id}
-                  onChange={e => setForm({ ...form, category_id: e.target.value })}
-                >
-                  <option value="">Select category</option>
-                  {categories.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </Form.Select>
-              </Form.Group>
-              {suggestedCat && (
-                <p className="text-success">
-                  Suggested: {suggestedCat.suggested_category_name} (auto-selected)
-                </p>
+                </>
               )}
-              <Button variant="primary" type="submit">
-                {modalMode === 'add' ? 'Add' : 'Update'}
-              </Button>
-            </Form>
-          </Modal.Body>
-        </Modal>
-      </Container>
+            </div>
+          </div>
+        </div>
+      </nav>
 
-      {/* AI Chat component */}
-      {showAIChat && <AIChat onClose={() => setShowAIChat(false)} />}
+      <div className="dash">
+        {/* ---------------- Header ---------------- */}
+        <div className="dash-head fb-fade-in">
+          <div>
+            <div className="eyebrow">{new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
+            <h1 className="serif dash-hello">
+              {greeting()}, <em className="grad-text">{(user?.full_name || '').split(' ')[0] || 'there'}</em>
+            </h1>
+          </div>
+          <div className="month-switch">
+            <button className="fb-icon-btn" onClick={() => setMonth((m) => shiftMonth(m, -1))} aria-label="Previous month"><FiChevronLeft /></button>
+            <span className="label">{monthLabel(month)}</span>
+            <button className="fb-icon-btn" onClick={() => setMonth((m) => shiftMonth(m, 1))} disabled={isCurrent}
+              style={{ opacity: isCurrent ? 0.3 : 1 }} aria-label="Next month"><FiChevronRight /></button>
+          </div>
+        </div>
+
+        {loading ? <DashboardSkeleton /> : (
+          <>
+            {/* ---------------- Hero ---------------- */}
+            <div className="hero-grid">
+              <NetCard stats={stats} prev={prevStats} month={month} baseIncome={baseIncome} onSetIncome={() => setTab('settings')} />
+              <div className="fb-card fb-fade-in d2 text-center">
+                <div className="fb-card-title justify-content-center">Financial health</div>
+                <ScoreRing score={health.score} />
+                <div className="fw-semibold">{health.rating}</div>
+                <div className="small muted mt-1">
+                  {stats.income > 0
+                    ? `Saving ${Math.round(stats.savingsRate * 100)}% of income this month`
+                    : 'Add your monthly income in Settings'}
+                </div>
+              </div>
+            </div>
+
+            {/* ---------------- Stats ---------------- */}
+            <div className="stat-grid">
+              <Stat className="d1" icon={<FiArrowDownLeft />} tint="#34d399" label="Income" value={money(stats.income)}
+                sub={stats.extraIncome > 0 ? `incl. ${money(stats.extraIncome)} extra` : 'Salary + passive'} />
+              <Stat className="d2" icon={<FiArrowUpRight />} tint="#fb7185" label="Spending" value={money(stats.spending)}
+                sub={`${stats.txs.filter((t) => !isIncomeTx(t)).length} transactions`} />
+              <Stat className="d3" icon={<FiCreditCard />} tint="#fbbf24" label="EMIs" value={money(stats.emi)}
+                sub={`${loans.filter((l) => loanActiveIn(l, month)).length} active`} />
+              <Stat className="d4" icon={<FiPercent />} tint="#a78bfa" label="Savings rate"
+                value={stats.income > 0 ? `${Math.round(stats.savingsRate * 100)}%` : '—'}
+                sub={stats.income > 0 ? `${money(stats.net)} kept` : 'Set income to track'} />
+            </div>
+
+            {/* ---------------- Tabs ---------------- */}
+            <div className="tabs-bar">
+              <div className="fb-seg" role="tablist">
+                {[
+                  ['overview', 'Overview', <FiGrid key="i" />],
+                  ['transactions', 'Transactions', <FiList key="i" />],
+                  ['loans', 'Loans & EMIs', <FiCalendar key="i" />],
+                  ['settings', 'Settings', <FiSettings key="i" />],
+                ].map(([key, label, icon]) => (
+                  <button key={key} role="tab" aria-selected={tab === key} className={tab === key ? 'active' : ''} onClick={() => setTab(key)}>
+                    {icon}{label}
+                  </button>
+                ))}
+              </div>
+              {(tab === 'overview' || tab === 'transactions') && (
+                <button className="fb-btn" onClick={() => setTxModal({})}><FiPlus /> Add transaction</button>
+              )}
+              {tab === 'loans' && (
+                <button className="fb-btn" onClick={() => setLoanModal({})}><FiPlus /> Add loan / EMI</button>
+              )}
+            </div>
+
+            {tab === 'overview' && (
+              <Overview transactions={transactions} loans={loans} baseIncome={baseIncome} month={month} stats={stats}
+                onEdit={setTxModal} onViewAll={() => setTab('transactions')} onAdd={() => setTxModal({})} />
+            )}
+            {tab === 'transactions' && (
+              <Transactions transactions={transactions} categories={categories} month={month}
+                onEdit={setTxModal}
+                onDelete={(tx) => askDelete('Delete transaction?', `“${tx.description}” for ${money(tx.amount)} will be removed.`,
+                  `${API_BASE}/transactions/${tx.id}`, loadTransactions, 'Transaction deleted')} />
+            )}
+            {tab === 'loans' && (
+              <Loans loans={loans} month={month} onEdit={setLoanModal} onAdd={() => setLoanModal({})}
+                onDelete={(loan) => askDelete('Delete loan?', `“${loan.name}” will be removed from your EMIs.`,
+                  `${API_BASE}/loans/${loan.id}`, loadLoans, 'Loan deleted')} />
+            )}
+            {tab === 'settings' && (
+              <Settings user={user} income={income} setIncome={setIncome} categories={categories}
+                reloadCategories={loadCategories} toast={toast} onLogout={handleLogout} />
+            )}
+          </>
+        )}
+      </div>
+
+      {txModal && (
+        <TransactionModal tx={txModal} categories={categories} onClose={() => setTxModal(null)}
+          onSaved={(msg) => { setTxModal(null); loadTransactions(); toast(msg); }} toast={toast} />
+      )}
+      {loanModal && (
+        <LoanModal loan={loanModal} onClose={() => setLoanModal(null)}
+          onSaved={(msg) => { setLoanModal(null); loadLoans(); toast(msg); }} toast={toast} />
+      )}
+      <ConfirmModal confirm={confirm} onClose={() => setConfirm(null)} />
+      <AIChat open={aiOpen} onClose={() => setAiOpen(false)} user={user} health={healthScore(monthStats({ transactions, loans, baseIncome, key: currentMonthKey() }))} />
+      <Toasts toasts={toasts} />
     </>
+  );
+}
+
+/* =====================================================================
+   Hero pieces
+   ===================================================================== */
+function NetCard({ stats, prev, month, baseIncome, onSetIncome }) {
+  const net = useCountUp(stats.net);
+  const pct = stats.income > 0 ? (stats.spent / stats.income) * 100 : 0;
+  const delta = stats.spent - prev.spent;
+  return (
+    <div className="fb-card fb-card-hero fb-fade-in d1">
+      <div className="d-flex justify-content-between align-items-start gap-2">
+        <div className="eyebrow">Net · {monthLabel(month, { month: 'long' })}</div>
+        {prev.spent > 0 && (
+          <span className={`fb-chip ${delta > 0 ? '' : 'violet'}`}>
+            {delta > 0 ? <FiArrowUpRight className="neg" /> : <FiArrowDownLeft className="pos" />}
+            {money(Math.abs(delta))} {delta > 0 ? 'more' : 'less'} spent than last month
+          </span>
+        )}
+      </div>
+      <div className={`serif hero-net num ${stats.net < 0 ? 'neg' : ''}`}>{money(net)}</div>
+      {baseIncome > 0 || stats.income > 0 ? (
+        <>
+          <div className="d-flex justify-content-between small muted mb-2 mt-3">
+            <span>{money(stats.spent)} spent of {money(stats.income)}</span>
+            <span className="num">{pct.toFixed(0)}%</span>
+          </div>
+          <div className={`fb-progress ${pct > 100 ? 'over' : ''}`}><div style={{ width: `${Math.min(100, pct)}%` }} /></div>
+        </>
+      ) : (
+        <button className="fb-chip violet mt-3" onClick={onSetIncome}><FiPlus /> Add your monthly income to see your net</button>
+      )}
+      <div className="hero-meta">
+        <div><div className="k">Income</div><div className="v num pos">{money(stats.income)}</div></div>
+        <div><div className="k">Spending</div><div className="v num">{money(stats.spending)}</div></div>
+        <div><div className="k">EMIs</div><div className="v num">{money(stats.emi)}</div></div>
+      </div>
+    </div>
+  );
+}
+
+function ScoreRing({ score }) {
+  const shown = useCountUp(score);
+  const r = 56, c = 2 * Math.PI * r;
+  return (
+    <div className="score-ring">
+      <svg width="132" height="132" viewBox="0 0 132 132" aria-hidden="true">
+        <defs>
+          <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#c4b5fd" /><stop offset="100%" stopColor="#6366f1" />
+          </linearGradient>
+        </defs>
+        <circle cx="66" cy="66" r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="10" />
+        <circle cx="66" cy="66" r={r} fill="none" stroke="url(#ringGrad)" strokeWidth="10" strokeLinecap="round"
+          strokeDasharray={c} strokeDashoffset={c * (1 - shown / 100)} />
+      </svg>
+      <div className="val"><div><b className="num">{Math.round(shown)}</b><span className="small faint">/ 100</span></div></div>
+    </div>
+  );
+}
+
+function Stat({ icon, tint, label, value, sub, className = '' }) {
+  return (
+    <div className={`fb-card stat fb-fade-in ${className}`}>
+      <div className="icon" style={{ background: `${tint}1f`, color: tint }}>{icon}</div>
+      <div className="small muted">{label}</div>
+      <div className="v num">{value}</div>
+      <div className="sub">{sub}</div>
+    </div>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <>
+      <div className="hero-grid">
+        <div className="fb-skeleton" style={{ height: 250 }} />
+        <div className="fb-skeleton" style={{ height: 250 }} />
+      </div>
+      <div className="stat-grid">{[0, 1, 2, 3].map((i) => <div key={i} className="fb-skeleton" style={{ height: 140 }} />)}</div>
+      <div className="fb-skeleton" style={{ height: 320 }} />
+    </>
+  );
+}
+
+/* =====================================================================
+   Overview tab
+   ===================================================================== */
+function ChartTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="fb-tooltip">
+      <div className="fw-semibold mb-1">{label}</div>
+      {payload.map((p) => (
+        <div key={p.dataKey} className="d-flex gap-3 justify-content-between">
+          <span className="muted">{p.name}</span><span className="num">{money(p.value)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Overview({ transactions, loans, baseIncome, month, stats, onEdit, onViewAll, onAdd }) {
+  const flow = useMemo(() => Array.from({ length: 6 }, (_, i) => {
+    const key = shiftMonth(month, i - 5);
+    const s = monthStats({ transactions, loans, baseIncome, key });
+    return { name: monthLabel(key, { month: 'short' }), Income: Math.round(s.income), Spent: Math.round(s.spent) };
+  }), [transactions, loans, baseIncome, month]);
+
+  const byCat = useMemo(() => {
+    const m = {};
+    stats.txs.filter((t) => !isIncomeTx(t)).forEach((t) => {
+      const n = t.category?.name || 'Uncategorized';
+      m[n] = (m[n] || 0) + t.amount;
+    });
+    if (stats.emi > 0) m['Loans & EMIs'] = stats.emi;
+    return Object.entries(m).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+  }, [stats]);
+
+  const recent = [...stats.txs].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6);
+
+  return (
+    <div className="overview-grid fb-fade-in">
+      <div className="fb-card">
+        <div className="fb-card-title"><span>Cash flow · last 6 months</span>
+          <span className="d-flex gap-3 small">
+            <span className="d-flex align-items-center gap-1"><span style={{ width: 8, height: 8, borderRadius: 2, background: '#a78bfa' }} />Income</span>
+            <span className="d-flex align-items-center gap-1"><span style={{ width: 8, height: 8, borderRadius: 2, background: '#f472b6' }} />Spent</span>
+          </span>
+        </div>
+        <div style={{ height: 260 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={flow} barGap={4} margin={{ top: 8, right: 0, left: -12, bottom: 0 }}>
+              <defs>
+                <linearGradient id="gIn" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#c4b5fd" /><stop offset="100%" stopColor="#7c3aed" /></linearGradient>
+                <linearGradient id="gOut" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#f9a8d4" /><stop offset="100%" stopColor="#db2777" /></linearGradient>
+              </defs>
+              <XAxis dataKey="name" axisLine={false} tickLine={false} />
+              <YAxis axisLine={false} tickLine={false} tickFormatter={compactMoney} width={56} />
+              <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+              <Bar dataKey="Income" fill="url(#gIn)" radius={[6, 6, 0, 0]} maxBarSize={22} />
+              <Bar dataKey="Spent" fill="url(#gOut)" radius={[6, 6, 0, 0]} maxBarSize={22} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="fb-card">
+        <div className="fb-card-title"><span>Where it went</span><FiPieChart /></div>
+        {byCat.length === 0 ? (
+          <Empty icon={<FiPieChart />} title="No spending yet" text="Your category breakdown will appear here." />
+        ) : (
+          <>
+            <div style={{ height: 170, position: 'relative' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={byCat} dataKey="value" nameKey="name" innerRadius={58} outerRadius={80} paddingAngle={2} stroke="none">
+                    {byCat.map((d) => <Cell key={d.name} fill={colorFor(d.name)} />)}
+                  </Pie>
+                  <Tooltip content={({ active, payload }) => active && payload?.length ? (
+                    <div className="fb-tooltip"><span className="muted">{payload[0].name}</span> <b className="num ms-2">{money(payload[0].value)}</b></div>
+                  ) : null} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="position-absolute top-50 start-50 translate-middle text-center" style={{ pointerEvents: 'none' }}>
+                <div className="small faint">Total</div>
+                <div className="fw-semibold num">{compactMoney(stats.spent)}</div>
+              </div>
+            </div>
+            <div className="mt-2">
+              {byCat.slice(0, 5).map((d) => (
+                <div key={d.name} className="legend-row">
+                  <span className="sw" style={{ background: colorFor(d.name) }} />
+                  <span className="fb-ellipsis" style={{ width: 110 }}>{d.name}</span>
+                  <span className="bar"><div style={{ width: `${(d.value / byCat[0].value) * 100}%`, background: colorFor(d.name) }} /></span>
+                  <span className="num" style={{ minWidth: 74, textAlign: 'right' }}>{money(d.value)}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="fb-card" style={{ gridColumn: '1 / -1' }}>
+        <div className="fb-card-title"><span>Recent activity</span>
+          {recent.length > 0 && <button className="fb-btn fb-btn-ghost fb-btn-sm" onClick={onViewAll}>View all</button>}
+        </div>
+        {recent.length === 0 ? (
+          <Empty icon={<FiInbox />} title={`Nothing in ${monthLabel(month, { month: 'long' })} yet`}
+            text="Add your first transaction to start tracking."
+            action={<button className="fb-btn fb-btn-sm mt-3" onClick={onAdd}><FiPlus /> Add transaction</button>} />
+        ) : recent.map((tx) => <TxRow key={tx.id} tx={tx} onEdit={onEdit} />)}
+      </div>
+    </div>
+  );
+}
+
+function Empty({ icon, title, text, action }) {
+  return (
+    <div className="fb-empty">
+      <div className="icon">{icon}</div>
+      <div className="fw-semibold" style={{ color: 'var(--text)' }}>{title}</div>
+      <div className="small mt-1">{text}</div>
+      {action}
+    </div>
+  );
+}
+
+function TxRow({ tx, onEdit, onDelete }) {
+  const name = tx.category?.name || 'Uncategorized';
+  const income = isIncomeTx(tx);
+  const color = colorFor(name);
+  return (
+    <div className="fb-row">
+      <div className="fb-dot" style={{ background: `${color}1f`, color }}>{name[0]}</div>
+      <div className="flex-grow-1" style={{ minWidth: 0 }}>
+        <div className="fw-medium fb-ellipsis">{tx.description}</div>
+        <div className="small faint">{name} · {fmtDay(tx.date)}</div>
+      </div>
+      <div className={`num fw-semibold ${income ? 'pos' : ''}`}>{income ? '+' : '−'}{money(tx.amount)}</div>
+      <div className="actions">
+        {onEdit && <button className="fb-icon-btn" onClick={() => onEdit(tx)} aria-label="Edit"><FiEdit2 size={15} /></button>}
+        {onDelete && <button className="fb-icon-btn danger" onClick={() => onDelete(tx)} aria-label="Delete"><FiTrash2 size={15} /></button>}
+      </div>
+    </div>
+  );
+}
+
+/* =====================================================================
+   Transactions tab
+   ===================================================================== */
+function Transactions({ transactions, categories, month, onEdit, onDelete }) {
+  const [q, setQ] = useState('');
+  const [cat, setCat] = useState('');
+  const [scope, setScope] = useState('month');
+
+  const list = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return transactions
+      .filter((t) => scope === 'all' || monthKey(t.date) === month)
+      .filter((t) => !cat || String(t.category_id || '') === cat)
+      .filter((t) => !needle || t.description.toLowerCase().includes(needle) || (t.category?.name || '').toLowerCase().includes(needle))
+      .sort((a, b) => b.date.localeCompare(a.date));
+  }, [transactions, q, cat, scope, month]);
+
+  const groups = useMemo(() => {
+    const g = [];
+    list.forEach((t) => {
+      const day = t.date.slice(0, 10);
+      if (!g.length || g[g.length - 1].day !== day) g.push({ day, items: [] });
+      g[g.length - 1].items.push(t);
+    });
+    return g;
+  }, [list]);
+
+  const totalOut = list.filter((t) => !isIncomeTx(t)).reduce((a, t) => a + t.amount, 0);
+  const totalIn = list.filter(isIncomeTx).reduce((a, t) => a + t.amount, 0);
+
+  return (
+    <div className="fb-card fb-fade-in">
+      <div className="toolbar">
+        <div className="search">
+          <FiSearch />
+          <input className="fb-input" placeholder="Search transactions" value={q} onChange={(e) => setQ(e.target.value)} />
+        </div>
+        <select className="form-select" value={cat} onChange={(e) => setCat(e.target.value)} aria-label="Filter by category">
+          <option value="">All categories</option>
+          {categories.map((c) => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
+        </select>
+        <div className="fb-seg">
+          <button className={scope === 'month' ? 'active' : ''} onClick={() => setScope('month')}>{monthLabel(month, { month: 'short', year: 'numeric' })}</button>
+          <button className={scope === 'all' ? 'active' : ''} onClick={() => setScope('all')}>All time</button>
+        </div>
+      </div>
+      <div className="d-flex gap-3 small muted px-2 mb-1">
+        <span>{list.length} transactions</span>
+        <span>Out <b className="num" style={{ color: 'var(--text)' }}>{money(totalOut)}</b></span>
+        <span>In <b className="num pos">{money(totalIn)}</b></span>
+      </div>
+      {groups.length === 0 ? (
+        <Empty icon={<FiSearch />} title="No transactions found" text={q || cat ? 'Try a different search or filter.' : 'Add one with the button above.'} />
+      ) : groups.map((g) => (
+        <div key={g.day}>
+          <div className="day-head">{fmtDay(g.day, { weekday: 'short', day: 'numeric', month: 'short', year: scope === 'all' ? 'numeric' : undefined })}</div>
+          {g.items.map((tx) => <TxRow key={tx.id} tx={tx} onEdit={onEdit} onDelete={onDelete} />)}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* =====================================================================
+   Loans tab
+   ===================================================================== */
+function monthsBetween(a, b) {
+  const [y1, m1] = monthKey(a).split('-').map(Number);
+  const [y2, m2] = monthKey(b).split('-').map(Number);
+  return (y2 - y1) * 12 + (m2 - m1);
+}
+
+function Loans({ loans, month, onEdit, onDelete, onAdd }) {
+  if (loans.length === 0) {
+    return (
+      <div className="fb-card fb-fade-in">
+        <Empty icon={<FiCreditCard />} title="No loans or EMIs" text="Track home, car, education loans or any monthly EMI."
+          action={<button className="fb-btn fb-btn-sm mt-3" onClick={onAdd}><FiPlus /> Add loan / EMI</button>} />
+      </div>
+    );
+  }
+  const now = new Date().toISOString();
+  return (
+    <div className="loan-grid fb-fade-in">
+      {loans.map((loan) => {
+        const active = loanActiveIn(loan, month);
+        const total = loan.end_date ? Math.max(1, monthsBetween(loan.start_date, loan.end_date) + 1) : null;
+        const done = total ? Math.min(total, Math.max(0, monthsBetween(loan.start_date, now) + 1)) : null;
+        return (
+          <div key={loan.id} className="fb-card">
+            <div className="d-flex justify-content-between align-items-start gap-2">
+              <div style={{ minWidth: 0 }}>
+                <div className="fw-semibold fb-ellipsis" style={{ fontSize: 16 }}>{loan.name}</div>
+                <div className="small faint">{loan.description || 'Monthly EMI'}</div>
+              </div>
+              <span className={`fb-chip ${active ? 'violet' : ''}`}>{active ? 'Active' : 'Not active'}</span>
+            </div>
+            <div className="serif num mt-3" style={{ fontSize: 38, lineHeight: 1 }}>{money(loan.amount)}<span className="faint" style={{ fontFamily: 'var(--font)', fontSize: 14 }}> / month</span></div>
+            {total ? (
+              <>
+                <div className="d-flex justify-content-between small muted mt-3 mb-2">
+                  <span>{done} of {total} months</span><span>{Math.max(0, total - done)} left</span>
+                </div>
+                <div className="fb-progress"><div style={{ width: `${(done / total) * 100}%` }} /></div>
+              </>
+            ) : <div className="small muted mt-3">No end date set</div>}
+            <div className="d-flex justify-content-between align-items-center mt-3">
+              <span className="small faint">{fmtDay(loan.start_date, { month: 'short', year: 'numeric' })} → {loan.end_date ? fmtDay(loan.end_date, { month: 'short', year: 'numeric' }) : 'ongoing'}</span>
+              <span className="d-flex">
+                <button className="fb-icon-btn" onClick={() => onEdit(loan)} aria-label="Edit"><FiEdit2 size={15} /></button>
+                <button className="fb-icon-btn danger" onClick={() => onDelete(loan)} aria-label="Delete"><FiTrash2 size={15} /></button>
+              </span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* =====================================================================
+   Settings tab
+   ===================================================================== */
+function Settings({ user, income, setIncome, categories, reloadCategories, toast, onLogout }) {
+  const [active, setActive] = useState(income.active ? String(income.active) : '');
+  const [passive, setPassive] = useState(income.passive ? String(income.passive) : '');
+  const [saving, setSaving] = useState(false);
+  const [catName, setCatName] = useState('');
+  const [addingCat, setAddingCat] = useState(false);
+
+  const saveIncome = (e) => {
+    e.preventDefault();
+    const a = parseFloat(active) || 0, p = parseFloat(passive) || 0;
+    setSaving(true);
+    axios.put(`${API_BASE}/user/income?active=${a}&passive=${p}`)
+      .then(() => { setIncome({ active: a, passive: p }); toast('Income saved'); })
+      .catch((err) => toast(apiError(err), 'error'))
+      .finally(() => setSaving(false));
+  };
+
+  const addCategory = (e) => {
+    e.preventDefault();
+    const name = catName.trim();
+    if (!name) return;
+    if (categories.some((c) => c.name.toLowerCase() === name.toLowerCase())) {
+      toast('That category already exists', 'error');
+      return;
+    }
+    setAddingCat(true);
+    axios.post(`${API_BASE}/categories/`, { name })
+      .then(() => reloadCategories())
+      .then(() => { setCatName(''); toast('Category added'); })
+      .catch((err) => toast(apiError(err), 'error'))
+      .finally(() => setAddingCat(false));
+  };
+
+  return (
+    <div className="settings-grid fb-fade-in">
+      <form className="fb-card" onSubmit={saveIncome}>
+        <div className="fb-card-title"><span>Monthly income</span><FiArrowDownLeft /></div>
+        <label className="fb-label" htmlFor="ai">Salary / active income</label>
+        <div className="fb-input-wrap mb-3"><span className="prefix">₹</span>
+          <input id="ai" className="fb-input num" type="number" min="0" step="any" inputMode="decimal" placeholder="0"
+            value={active} onChange={(e) => setActive(e.target.value)} /></div>
+        <label className="fb-label" htmlFor="pi">Passive income <span className="faint">(rent, dividends, interest)</span></label>
+        <div className="fb-input-wrap mb-3"><span className="prefix">₹</span>
+          <input id="pi" className="fb-input num" type="number" min="0" step="any" inputMode="decimal" placeholder="0"
+            value={passive} onChange={(e) => setPassive(e.target.value)} /></div>
+        <div className="d-flex justify-content-between align-items-center gap-3">
+          <span className="small faint">Counted every month. One-off income? Add it as a transaction.</span>
+          <button className="fb-btn" type="submit" disabled={saving}>{saving ? <Spinner /> : 'Save'}</button>
+        </div>
+      </form>
+
+      <div className="fb-card">
+        <div className="fb-card-title"><span>Categories</span><FiTag /></div>
+        <form className="d-flex gap-2 mb-3" onSubmit={addCategory}>
+          <input className="fb-input" placeholder="New category, e.g. Groceries" value={catName} onChange={(e) => setCatName(e.target.value)} />
+          <button className="fb-btn" type="submit" disabled={addingCat || !catName.trim()} aria-label="Add category">{addingCat ? <Spinner /> : <FiPlus />}</button>
+        </form>
+        <div className="d-flex flex-wrap gap-2">
+          {categories.map((c) => (
+            <span key={c.id} className="fb-chip" title={c.user_id ? 'Your category' : 'Built-in'}>
+              <span style={{ width: 7, height: 7, borderRadius: 99, background: colorFor(c.name) }} />
+              {c.name}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="fb-card" style={{ gridColumn: '1 / -1' }}>
+        <div className="fb-card-title"><span>Account</span><FiUser /></div>
+        <div className="d-flex align-items-center gap-3 flex-wrap">
+          <div className="fb-avatar" style={{ width: 48, height: 48, fontSize: 16, cursor: 'default' }}>{initials(user)}</div>
+          <div className="flex-grow-1">
+            <div className="fw-semibold">{user?.full_name || '—'}</div>
+            <div className="small muted">{user?.email}</div>
+          </div>
+          <button className="fb-btn fb-btn-ghost" onClick={onLogout}><FiLogOut /> Sign out</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =====================================================================
+   Modals
+   ===================================================================== */
+function TransactionModal({ tx, categories, onClose, onSaved, toast }) {
+  const editing = Boolean(tx.id);
+  const incomeCats = categories.filter((c) => isIncomeCategory(c.name));
+  const expenseCats = categories.filter((c) => !isIncomeCategory(c.name));
+  const [type, setType] = useState(editing && isIncomeTx(tx) ? 'income' : 'expense');
+  const [form, setForm] = useState({
+    amount: editing ? String(tx.amount) : '',
+    description: tx.description || '',
+    category_id: tx.category_id ? String(tx.category_id) : '',
+    date: editing ? tx.date.slice(0, 10) : todayLocal(),
+  });
+  const [suggested, setSuggested] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const catTouched = useRef(editing);
+  const timer = useRef(null);
+
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  const switchType = (t) => {
+    setType(t);
+    setSuggested(null);
+    const pool = t === 'income' ? incomeCats : expenseCats;
+    if (!pool.some((c) => String(c.id) === form.category_id)) {
+      setForm((f) => ({ ...f, category_id: t === 'income' && incomeCats[0] ? String(incomeCats[0].id) : '' }));
+    }
+  };
+
+  const onDescription = (value) => {
+    setForm((f) => ({ ...f, description: value }));
+    clearTimeout(timer.current);
+    if (catTouched.current || value.trim().length < 3) return;
+    timer.current = setTimeout(() => {
+      axios.get(`${API_BASE}/suggest-category/?description=${encodeURIComponent(value)}`)
+        .then((res) => {
+          const id = res.data.suggested_category_id;
+          if (!id || catTouched.current) return;
+          const isInc = isIncomeCategory(res.data.suggested_category_name);
+          setType(isInc ? 'income' : 'expense');
+          setForm((f) => ({ ...f, category_id: String(id) }));
+          setSuggested(res.data.suggested_category_name);
+        })
+        .catch(() => {});
+    }, 350);
+  };
+
+  const submit = (e) => {
+    e.preventDefault();
+    const amount = parseFloat(form.amount);
+    if (!(amount > 0)) { toast('Enter an amount greater than zero', 'error'); return; }
+    const payload = {
+      amount,
+      description: form.description.trim(),
+      category_id: form.category_id ? Number(form.category_id) : null,
+      date: toApiDate(form.date),
+    };
+    setSaving(true);
+    const req = editing
+      ? axios.put(`${API_BASE}/transactions/${tx.id}`, payload)
+      : axios.post(`${API_BASE}/transactions/`, payload);
+    req.then(() => onSaved(editing ? 'Transaction updated' : 'Transaction added'))
+      .catch((err) => { toast(apiError(err), 'error'); setSaving(false); });
+  };
+
+  const pool = type === 'income' ? incomeCats : expenseCats;
+
+  return (
+    <Modal show onHide={onClose} centered>
+      <Modal.Header closeButton><Modal.Title>{editing ? 'Edit transaction' : 'New transaction'}</Modal.Title></Modal.Header>
+      <form onSubmit={submit}>
+        <Modal.Body>
+          <div className="fb-seg income type-toggle mb-3">
+            <button type="button" className={`is-expense ${type === 'expense' ? 'active' : ''}`} onClick={() => switchType('expense')}><FiArrowUpRight /> Expense</button>
+            <button type="button" className={`is-income ${type === 'income' ? 'active' : ''}`} onClick={() => switchType('income')}><FiArrowDownLeft /> Income</button>
+          </div>
+          <div className="fb-input-wrap amount-wrap mb-3">
+            <span className="prefix">₹</span>
+            <input className="fb-input amount-input num" type="number" min="0" step="any" inputMode="decimal" placeholder="0"
+              value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required autoFocus aria-label="Amount" />
+          </div>
+          <label className="fb-label" htmlFor="desc">Description</label>
+          <input id="desc" className="fb-input mb-3" placeholder={type === 'income' ? 'e.g. Freelance project' : 'e.g. Swiggy dinner'}
+            value={form.description} onChange={(e) => onDescription(e.target.value)} required maxLength={200} />
+          <div className="row g-3">
+            <div className="col-sm-6">
+              <label className="fb-label" htmlFor="cat">Category</label>
+              <select id="cat" className="form-select" value={form.category_id}
+                onChange={(e) => { catTouched.current = true; setSuggested(null); setForm({ ...form, category_id: e.target.value }); }}>
+                <option value="">Uncategorized</option>
+                {pool.map((c) => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
+              </select>
+              {suggested && <div className="small mt-2" style={{ color: 'var(--violet-soft)' }}><HiSparkles /> Auto-picked “{suggested}”</div>}
+            </div>
+            <div className="col-sm-6">
+              <label className="fb-label" htmlFor="date">Date</label>
+              <input id="date" className="fb-input" type="date" value={form.date} max={todayLocal()}
+                onChange={(e) => setForm({ ...form, date: e.target.value })} required />
+            </div>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <button type="button" className="fb-btn fb-btn-ghost" onClick={onClose}>Cancel</button>
+          <button type="submit" className="fb-btn" disabled={saving}>{saving ? <Spinner /> : editing ? 'Save changes' : 'Add transaction'}</button>
+        </Modal.Footer>
+      </form>
+    </Modal>
+  );
+}
+
+function LoanModal({ loan, onClose, onSaved, toast }) {
+  const editing = Boolean(loan.id);
+  const [form, setForm] = useState({
+    name: loan.name || '',
+    amount: editing ? String(loan.amount) : '',
+    start_date: editing ? loan.start_date.slice(0, 10) : todayLocal(),
+    end_date: loan.end_date ? loan.end_date.slice(0, 10) : '',
+    description: loan.description || '',
+  });
+  const [saving, setSaving] = useState(false);
+
+  const submit = (e) => {
+    e.preventDefault();
+    const amount = parseFloat(form.amount);
+    if (!(amount > 0)) { toast('Enter a monthly amount greater than zero', 'error'); return; }
+    if (form.end_date && form.end_date < form.start_date) { toast('End date must be after the start date', 'error'); return; }
+    const payload = {
+      name: form.name.trim(),
+      amount,
+      start_date: toApiDate(form.start_date),
+      end_date: form.end_date ? toApiDate(form.end_date) : null,
+      description: form.description.trim() || null,
+    };
+    setSaving(true);
+    const req = editing ? axios.put(`${API_BASE}/loans/${loan.id}`, payload) : axios.post(`${API_BASE}/loans/`, payload);
+    req.then(() => onSaved(editing ? 'Loan updated' : 'Loan added'))
+      .catch((err) => { toast(apiError(err), 'error'); setSaving(false); });
+  };
+
+  return (
+    <Modal show onHide={onClose} centered>
+      <Modal.Header closeButton><Modal.Title>{editing ? 'Edit loan' : 'New loan / EMI'}</Modal.Title></Modal.Header>
+      <form onSubmit={submit}>
+        <Modal.Body>
+          <label className="fb-label" htmlFor="ln">Name</label>
+          <input id="ln" className="fb-input mb-3" placeholder="e.g. Car loan — HDFC" value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })} required autoFocus maxLength={120} />
+          <label className="fb-label" htmlFor="la">Monthly EMI</label>
+          <div className="fb-input-wrap mb-3"><span className="prefix">₹</span>
+            <input id="la" className="fb-input num" type="number" min="0" step="any" inputMode="decimal" placeholder="0"
+              value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required /></div>
+          <div className="row g-3 mb-3">
+            <div className="col-6">
+              <label className="fb-label" htmlFor="ls">Starts</label>
+              <input id="ls" className="fb-input" type="date" value={form.start_date}
+                onChange={(e) => setForm({ ...form, start_date: e.target.value })} required />
+            </div>
+            <div className="col-6">
+              <label className="fb-label" htmlFor="le">Ends <span className="faint">(optional)</span></label>
+              <input id="le" className="fb-input" type="date" value={form.end_date} min={form.start_date}
+                onChange={(e) => setForm({ ...form, end_date: e.target.value })} />
+            </div>
+          </div>
+          <label className="fb-label" htmlFor="ld">Note <span className="faint">(optional)</span></label>
+          <input id="ld" className="fb-input" placeholder="e.g. 8.5% p.a., 60 months" value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })} maxLength={200} />
+        </Modal.Body>
+        <Modal.Footer>
+          <button type="button" className="fb-btn fb-btn-ghost" onClick={onClose}>Cancel</button>
+          <button type="submit" className="fb-btn" disabled={saving}>{saving ? <Spinner /> : editing ? 'Save changes' : 'Add loan'}</button>
+        </Modal.Footer>
+      </form>
+    </Modal>
+  );
+}
+
+function ConfirmModal({ confirm, onClose }) {
+  const [busy, setBusy] = useState(false);
+  if (!confirm) return null;
+  const yes = () => {
+    setBusy(true);
+    Promise.resolve(confirm.onYes()).finally(() => { setBusy(false); onClose(); });
+  };
+  return (
+    <Modal show onHide={onClose} centered size="sm">
+      <Modal.Body className="text-center pt-4">
+        <div className="fb-empty p-0">
+          <div className="icon" style={{ background: 'rgba(251,113,133,0.12)', color: 'var(--neg)' }}><FiTrash2 /></div>
+        </div>
+        <div className="serif" style={{ fontSize: 26 }}>{confirm.title}</div>
+        <div className="small muted mt-1 mb-4">{confirm.body}</div>
+        <div className="d-flex gap-2">
+          <button className="fb-btn fb-btn-ghost flex-grow-1" onClick={onClose}>Cancel</button>
+          <button className="fb-btn flex-grow-1" style={{ background: 'linear-gradient(135deg,#fb7185,#e11d48)', boxShadow: 'none' }}
+            onClick={yes} disabled={busy}>{busy ? <Spinner /> : 'Delete'}</button>
+        </div>
+      </Modal.Body>
+    </Modal>
   );
 }
 

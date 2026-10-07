@@ -1,257 +1,126 @@
 import React from 'react';
-import { Container, Row, Col, Button, Card } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
-import { FaRocket, FaChartLine, FaLock, FaMobileAlt, FaRobot, FaGift } from 'react-icons/fa';
+import {
+  FiArrowRight, FiCpu, FiTag, FiCalendar, FiActivity, FiLock, FiSmartphone, FiCheck,
+} from 'react-icons/fi';
+import { HiSparkles } from 'react-icons/hi2';
+import { useAuth } from './AuthContext';
+import { Brand } from './components/ui';
+import './About.css';
 
-// Custom dark theme
-const aboutStyles = `
-  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@700&display=swap');
-
-  body {
-    background: #000000 !important;
-    color: #e0e0e0;
-    font-family: 'Poppins', sans-serif;
-  }
-  .hero-section {
-    padding: 80px 0 40px;
-    text-align: center;
-  }
-  .hero-logo {
-    max-width: 250px;
-    width: 100%;
-    margin-bottom: 20px;
-    /* Glowing border effect */
-    border: 2px solid #3b82f6;
-    border-radius: 50%;
-    padding: 10px;
-    box-shadow: 0 0 20px #3b82f6, 0 0 40px #3b82f6, inset 0 0 10px #3b82f6;
-    transition: box-shadow 0.3s ease;
-    display: inline-block;
-  }
-  .hero-logo:hover {
-    box-shadow: 0 0 30px #3b82f6, 0 0 60px #3b82f6, inset 0 0 15px #3b82f6;
-  }
-  .multicolor-title {
-    font-family: 'Poppins', sans-serif;
-    font-size: 4rem;
-    font-weight: 700;
-    margin-bottom: 15px;
-    letter-spacing: 2px;
-  }
-  .multicolor-title span {
-    display: inline-block;
-  }
-  .letter-f { color: #4285F4; }  /* Google Blue */
-  .letter-i { color: #EA4335; }  /* Google Red */
-  .letter-n { color: #FBBC05; }  /* Google Yellow */
-  .letter-b { color: #4285F4; }  /* Blue */
-  .letter-u { color: #34A853; }  /* Google Green */
-  .letter-d { color: #EA4335; }  /* Red */
-  .letter-d2 { color: #FBBC05; } /* Yellow */
-  .letter-y { color: #4285F4; }  /* Blue */
-
-  .hero-subtitle {
-    font-size: 1.5rem;
-    color: #aaccff;
-    margin-bottom: 30px;
-    font-family: 'Poppins', sans-serif;
-  }
-  .feature-card {
-    background: #111 !important;
-    border: 2px solid #2a3a5a !important;
-    border-radius: 15px !important;
-    padding: 25px 20px;
-    height: 100%;
-    transition: transform 0.3s, box-shadow 0.3s;
-    color: white;
-  }
-  .feature-card:hover {
-    transform: translateY(-10px);
-    box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
-    border-color: #3b82f6 !important;
-  }
-  .feature-icon {
-    font-size: 3rem;
-    color: #3b82f6;
-    margin-bottom: 20px;
-  }
-  .feature-title {
-    font-size: 1.5rem;
-    font-weight: bold;
-    margin-bottom: 15px;
-    color: white;
-  }
-  .feature-text {
-    color: #aaa;
-    line-height: 1.6;
-  }
-  .cta-section {
-    background: linear-gradient(135deg, #1e3a8a, #6b21a5);
-    border-radius: 20px;
-    padding: 60px 20px;
-    margin: 60px 0;
-    text-align: center;
-  }
-  .cta-title {
-    font-size: 2.5rem;
-    font-weight: bold;
-    color: white;
-    margin-bottom: 20px;
-  }
-  .cta-text {
-    font-size: 1.2rem;
-    color: rgba(255,255,255,0.8);
-    margin-bottom: 30px;
-  }
-  .btn-custom {
-    padding: 12px 40px;
-    font-size: 1.2rem;
-    border-radius: 50px;
-    margin: 0 10px;
-  }
-  .btn-primary-custom {
-    background: white;
-    color: #1e3a8a;
-    border: none;
-  }
-  .btn-primary-custom:hover {
-    background: #e0e0e0;
-    color: #1e3a8a;
-  }
-  .btn-outline-custom {
-    background: transparent;
-    border: 2px solid white;
-    color: white;
-  }
-  .btn-outline-custom:hover {
-    background: white;
-    color: #1e3a8a;
-  }
-`;
+const FEATURES = [
+  [<FiCpu key="i" />, 'An assistant that knows your numbers', 'Ask “where did my money go?” and get an answer built from your own transactions, income and EMIs — not generic tips.'],
+  [<FiTag key="i" />, 'Smart categorisation', 'Type “Uber to office” or “Netflix” and FinBuddy files it in the right category for you.'],
+  [<FiCalendar key="i" />, 'Loans & EMIs, handled', 'Track every EMI with start and end dates, see months remaining, and watch them roll into your monthly budget.'],
+  [<FiActivity key="i" />, 'A monthly health score', 'Savings rate, EMI load and spending distilled into one score — so you know at a glance how this month is going.'],
+  [<FiLock key="i" />, 'Private by design', 'Passwords are hashed with bcrypt and every account only ever sees its own data.'],
+  [<FiSmartphone key="i" />, 'Beautiful everywhere', 'A calm, focused interface that feels just as good on your phone as on a big screen.'],
+];
 
 function About() {
+  const { user } = useAuth();
+  const primary = user ? { to: '/dashboard', label: 'Open dashboard' } : { to: '/register', label: 'Start free' };
+
   return (
-    <>
-      <style>{aboutStyles}</style>
-      <Container fluid className="p-0">
-        {/* Hero Section */}
-        <div className="hero-section">
-          <Container>
-            <img src="/FinBuddy-new.png" alt="FinBuddy Logo" className="hero-logo" />
-            <div className="multicolor-title">
-              <span className="letter-f">F</span>
-              <span className="letter-i">i</span>
-              <span className="letter-n">n</span>
-              <span className="letter-b">B</span>
-              <span className="letter-u">u</span>
-              <span className="letter-d">d</span>
-              <span className="letter-d2">d</span>
-              <span className="letter-y">y</span>
-            </div>
-            <p className="hero-subtitle">Your AI-powered financial companion</p>
-            <p style={{ fontSize: '1.2rem', color: '#ccc', maxWidth: '800px', margin: '0 auto 40px' }}>
-              Take control of your finances with intelligent tracking, predictive insights, and rewards that motivate smart money habits.
+    <div className="lp">
+      <div className="lp-wrap">
+        <nav className="lp-nav">
+          <Brand />
+          <div className="links">
+            {!user && <Link className="plain" to="/login">Sign in</Link>}
+            <Link className="fb-btn fb-btn-sm" to={primary.to}>{primary.label}</Link>
+          </div>
+        </nav>
+
+        {/* ---------------- Hero ---------------- */}
+        <section className="lp-hero">
+          <div className="fb-fade-in">
+            <span className="fb-chip violet"><HiSparkles /> AI-powered personal finance</span>
+            <h1 className="lp-title">Your money,<br /><em className="grad-text">beautifully</em><br />in control.</h1>
+            <p className="lp-sub">
+              FinBuddy brings your spending, income and EMIs into one calm dashboard — with an AI
+              assistant that answers questions about your actual money.
             </p>
-            <div>
-              <Link to="/login">
-                <Button variant="primary" size="lg" className="me-3" style={{ borderRadius: '50px', padding: '12px 40px' }}>
-                  Login
-                </Button>
-              </Link>
-              <Link to="/register">
-                <Button variant="outline-primary" size="lg" style={{ borderRadius: '50px', padding: '12px 40px' }}>
-                  Register
-                </Button>
-              </Link>
+            <div className="lp-cta">
+              <Link className="fb-btn fb-btn-lg" to={primary.to}>{primary.label} <FiArrowRight /></Link>
+              {!user && <Link className="fb-btn fb-btn-ghost fb-btn-lg" to="/login">I have an account</Link>}
             </div>
-          </Container>
-        </div>
-
-        {/* Features Section */}
-        <Container className="my-5">
-          <h2 className="text-center mb-5" style={{ fontSize: '2.5rem', color: 'white' }}>Why Choose FinBuddy?</h2>
-          <Row>
-            <Col md={4} className="mb-4">
-              <Card className="feature-card">
-                <Card.Body className="text-center">
-                  <FaRobot className="feature-icon" />
-                  <h3 className="feature-title">AI-Powered Insights</h3>
-                  <p className="feature-text">Machine learning analyzes your spending patterns and provides personalized financial advice.</p>
-                </Card.Body>
-              </Card>
-            </Col>
-            <Col md={4} className="mb-4">
-              <Card className="feature-card">
-                <Card.Body className="text-center">
-                  <FaChartLine className="feature-icon" />
-                  <h3 className="feature-title">Smart Tracking</h3>
-                  <p className="feature-text">Automatically categorizes expenses, tracks income, and monitors loans and EMIs in real time.</p>
-                </Card.Body>
-              </Card>
-            </Col>
-            <Col md={4} className="mb-4">
-              <Card className="feature-card">
-                <Card.Body className="text-center">
-                  <FaGift className="feature-icon" />
-                  <h3 className="feature-title">Rewards Program</h3>
-                  <p className="feature-text">Earn points for good financial habits and redeem them for exclusive partner offers.</p>
-                </Card.Body>
-              </Card>
-            </Col>
-          </Row>
-          <Row>
-            <Col md={4} className="mb-4">
-              <Card className="feature-card">
-                <Card.Body className="text-center">
-                  <FaLock className="feature-icon" />
-                  <h3 className="feature-title">Secure & Private</h3>
-                  <p className="feature-text">Your data is encrypted and stored securely. Each user has their own private space.</p>
-                </Card.Body>
-              </Card>
-            </Col>
-            <Col md={4} className="mb-4">
-              <Card className="feature-card">
-                <Card.Body className="text-center">
-                  <FaMobileAlt className="feature-icon" />
-                  <h3 className="feature-title">Mobile Friendly</h3>
-                  <p className="feature-text">Access your finances on the go with our responsive design – works on any device.</p>
-                </Card.Body>
-              </Card>
-            </Col>
-            <Col md={4} className="mb-4">
-              <Card className="feature-card">
-                <Card.Body className="text-center">
-                  <FaRocket className="feature-icon" />
-                  <h3 className="feature-title">Future-Ready</h3>
-                  <p className="feature-text">Predictive analytics help you plan for the future and achieve your financial goals.</p>
-                </Card.Body>
-              </Card>
-            </Col>
-          </Row>
-        </Container>
-
-        {/* CTA Section */}
-        <Container>
-          <div className="cta-section">
-            <h2 className="cta-title">Ready to take control of your finances?</h2>
-            <p className="cta-text">Join thousands of users who are already managing their money smarter with FinBuddy.</p>
-            <div>
-              <Link to="/register">
-                <Button className="btn-custom btn-primary-custom me-3">Get Started Now</Button>
-              </Link>
-              <Link to="/login">
-                <Button className="btn-custom btn-outline-custom">Sign In</Button>
-              </Link>
+            <div className="lp-trust">
+              <span><FiCheck /> Free to use</span>
+              <span><FiCheck /> No bank login needed</span>
+              <span><FiCheck /> Set up in a minute</span>
             </div>
           </div>
-        </Container>
 
-        {/* Footer */}
-        <footer className="text-center py-4" style={{ color: '#666', borderTop: '1px solid #222' }}>
-          <p>© 2026 FinBuddy. All rights reserved. Your AI-powered financial companion.</p>
+          <div className="lp-preview fb-fade-in d2" aria-hidden="true">
+            <div className="fb-card fb-card-hero lp-device">
+              <div className="d-flex justify-content-between">
+                <span className="eyebrow">Net · October</span>
+                <span className="fb-chip violet">Health 84/100</span>
+              </div>
+              <div className="big num">₹48,250</div>
+              <div className="small muted">62% of income spent · saving 38%</div>
+              <div className="lp-bars">
+                {[62, 48, 70, 52, 66, 44, 74, 50, 80, 46, 76, 40].map((h, i) => <div key={i} style={{ height: `${h}%` }} />)}
+              </div>
+              {[
+                ['F', '#a78bfa', 'Food & Drink', '₹8,420'],
+                ['T', '#38bdf8', 'Transport', '₹3,150'],
+                ['L', '#fbbf24', 'Home loan EMI', '₹21,500'],
+              ].map(([l, c, n, a]) => (
+                <div key={n} className="lp-row">
+                  <span className="dot" style={{ background: `${c}22`, color: c }}>{l}</span>
+                  <span className="flex-grow-1">{n}</span>
+                  <span className="num fw-semibold">{a}</span>
+                </div>
+              ))}
+            </div>
+            <div className="fb-card lp-chat">
+              <div className="who"><HiSparkles /> FinBuddy AI</div>
+              You spent <b>₹2,300 less on food</b> than last month. Keep this up and you'll save an extra <b>₹27,600</b> this year.
+            </div>
+          </div>
+        </section>
+
+        {/* ---------------- Features ---------------- */}
+        <section className="lp-section">
+          <div className="eyebrow">Why FinBuddy</div>
+          <h2 className="lp-h2">Everything you need.<br /><span className="muted">Nothing you don't.</span></h2>
+          <div className="lp-features">
+            {FEATURES.map(([icon, title, text]) => (
+              <div key={title} className="fb-card lp-feature">
+                <div className="ico">{icon}</div>
+                <h3>{title}</h3>
+                <p>{text}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ---------------- How it works ---------------- */}
+        <section className="lp-section">
+          <div className="eyebrow">How it works</div>
+          <h2 className="lp-h2">Three steps to clarity.</h2>
+          <div className="lp-steps">
+            <div className="lp-step"><div className="n">01</div><h3>Set your income</h3><p>Add your salary and any passive income once — it's counted every month.</p></div>
+            <div className="lp-step"><div className="n">02</div><h3>Log what you spend</h3><p>Add expenses and EMIs in seconds. Categories are picked for you.</p></div>
+            <div className="lp-step"><div className="n">03</div><h3>Ask, learn, improve</h3><p>See your monthly picture and ask the AI how to do better next month.</p></div>
+          </div>
+        </section>
+
+        {/* ---------------- Final CTA ---------------- */}
+        <section className="lp-final">
+          <h2 className="lp-h2">Make this the month<br />you <em className="grad-text">take control</em>.</h2>
+          <p className="muted mb-4">Free, private and ready in under a minute.</p>
+          <Link className="fb-btn fb-btn-lg" to={primary.to}>{primary.label} <FiArrowRight /></Link>
+        </section>
+
+        <footer className="lp-foot">
+          <span>© {new Date().getFullYear()} FinBuddy</span>
+          <span>General guidance only — not licensed financial advice.</span>
         </footer>
-      </Container>
-    </>
+      </div>
+    </div>
   );
 }
 
