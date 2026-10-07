@@ -49,6 +49,11 @@ app.include_router(ai_router)
 def root():
     return {"message": "FinMind API is running"}
 
+# Cheap liveness check for the keep-alive pinger and frontend pre-warm (no DB work).
+@app.api_route("/health", methods=["GET", "HEAD"])
+def health():
+    return {"status": "ok"}
+
 # -------------------- User Income Endpoints --------------------
 @app.get("/user/income", response_model=schemas.User)
 def get_user_income(current_user: models.User = Depends(auth.get_current_active_user)):
