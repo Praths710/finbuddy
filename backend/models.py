@@ -54,3 +54,24 @@ class Loan(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     
     owner = relationship("User", back_populates="loans")
+
+class Budget(Base):
+    __tablename__ = "budgets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    category_id = Column(Integer, ForeignKey("categories.id"))
+    amount = Column(Float)  # monthly limit
+
+    category = relationship("Category")
+
+class Goal(Base):
+    __tablename__ = "goals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    name = Column(String)
+    target = Column(Float)
+    saved = Column(Float, default=0.0)
+    deadline = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)

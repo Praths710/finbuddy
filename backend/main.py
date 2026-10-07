@@ -275,6 +275,121 @@ def delete_loan(
     db.commit()
     return {"message": "Loan deleted successfully"}
 
+# -------------------- Budget Endpoints --------------------
+@app.get("/budgets/", response_model=List[schemas.Budget])
+def read_budgets(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    return db.query(models.Budget).filter(models.Budget.user_id == current_user.id).all()
+
+@app.put("/budgets/", response_model=schemas.Budget)
+def set_budget(
+    budget: schemas.BudgetCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    """Create or update the monthly limit for one category."""
+    category = db.query(models.Category).filter(
+        models.Category.id == budget.category_id,
+        (models.Category.user_id == current_user.id) | (models.Category.user_id == None)
+    ).first()
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    db_budget = db.query(models.Budget).filter(
+        models.Budget.user_id == current_user.id,
+        models.Budget.category_id == budget.category_id
+    ).first()
+    if db_budget:
+        db_budget.amount = budget.amount
+    else:
+        db_budget = models.Budget(**budget.dict(), user_id=current_user.id)
+        db.add(db_budget)
+    db.commit()
+    db.refresh(db_budget)
+    return db_budget
+
+@app.delete("/budgets/{budget_id}")
+def delete_budget(
+    budget_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    budget = db.query(models.Budget)\
+        .filter(models.Budget.id == budget_id, models.Budget.user_id == current_user.id)\
+        .first()
+    if not budget:
+        raise HTTPException(status_code=404, detail="Budget not found")
+    db.delete(budget)
+    db.commit()
+    return {"message": "Budget deleted successfully"}
+
+# -------------------- Goal Endpoints --------------------
+def get_own_goal(db: Session, goal_id: int, user: models.User) -> models.Goal:
+    goal = db.query(models.Goal)\
+        .filter(models.Goal.id == goal_id, models.Goal.user_id == user.id)\
+        .first()
+    if not goal:
+        raise HTTPException(status_code=404, detail="Goal not found")
+    return goal
+
+@app.get("/goals/", response_model=List[schemas.Goal])
+def read_goals(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    return db.query(models.Goal).filter(models.Goal.user_id == current_user.id)\
+        .order_by(models.Goal.created_at).all()
+
+@app.post("/goals/", response_model=schemas.Goal)
+def create_goal(
+    goal: schemas.GoalCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    db_goal = models.Goal(**goal.dict(), user_id=current_user.id)
+    db.add(db_goal)
+    db.commit()
+    db.refresh(db_goal)
+    return db_goal
+
+@app.put("/goals/{goal_id}", response_model=schemas.Goal)
+def update_goal(
+    goal_id: int,
+    goal_update: schemas.GoalCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    goal = get_own_goal(db, goal_id, current_user)
+    for key, value in goal_update.dict().items():
+        setattr(goal, key, value)
+    db.commit()
+    db.refresh(goal)
+    return goal
+
+@app.post("/goals/{goal_id}/contribute", response_model=schemas.Goal)
+def contribute_to_goal(
+    goal_id: int,
+    contribution: schemas.GoalContribution,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    goal = get_own_goal(db, goal_id, current_user)
+    goal.saved = max(0.0, (goal.saved or 0) + contribution.amount)
+    db.commit()
+    db.refresh(goal)
+    return goal
+
+@app.delete("/goals/{goal_id}")
+def delete_goal(
+    goal_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    db.delete(get_own_goal(db, goal_id, current_user))
+    db.commit()
+    return {"message": "Goal deleted successfully"}
+
 # -------------------- Startup event --------------------
 @app.on_event("startup")
 def startup_event():

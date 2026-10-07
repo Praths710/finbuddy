@@ -9,12 +9,12 @@
   padding: 8px 14px;
   border-radius: 11px;
   font-size: 13.5px; font-weight: 600;
-  color: #e9e2ff;
-  background: rgba(139, 92, 246, 0.12);
-  border: 1px solid rgba(167, 139, 250, 0.35);
+  color: #fbf3dc;
+  background: rgba(212, 175, 55, 0.12);
+  border: 1px solid rgba(232, 207, 143, 0.35);
   transition: all 0.2s;
 }
-.ai-trigger:hover { background: rgba(139, 92, 246, 0.22); box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.12); }
+.ai-trigger:hover { background: rgba(212, 175, 55, 0.22); box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.12); }
 .ai-trigger .spark { color: var(--violet-soft); }
 
 .dash-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
@@ -75,3 +75,32 @@
   .stat .v { font-size: 20px; }
   .fb-card { padding: 18px; }
 }
+
+/* ---------- New features ---------- */
+.tab-badge {
+  min-width: 18px; height: 18px; padding: 0 5px;
+  border-radius: 99px; display: inline-grid; place-items: center;
+  font-size: 11px; font-weight: 700;
+  background: var(--neg); color: #1a0705;
+}
+.forecast {
+  display: flex; align-items: flex-start; gap: 9px;
+  margin-top: 14px; padding: 10px 12px;
+  border-radius: 12px; font-size: 13.5px; color: var(--muted);
+  background: rgba(232, 207, 143, 0.06);
+  border: 1px solid rgba(232, 207, 143, 0.14);
+}
+.forecast svg { color: var(--gold); flex: none; margin-top: 2px; }
+.forecast b { color: var(--text); font-weight: 600; }
+.forecast.warn { background: rgba(241, 154, 143, 0.07); border-color: rgba(241, 154, 143, 0.25); }
+.forecast.warn svg { color: var(--neg); }
+
+.budget-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+.goal-ring { position: relative; width: 84px; height: 84px; flex: none; }
+.goal-ring span { position: absolute; inset: 0; display: grid; place-items: center; font-weight: 700; font-size: 15px; }
+
+/* Privacy mode — blur every amount */
+.privacy-on .num { filter: blur(9px); transition: filter 0.2s; user-select: none; }
+.privacy-on .num:hover { filter: blur(9px); }
+.privacy-on .recharts-yAxis .recharts-cartesian-axis-tick-value { filter: blur(6px); }
+.num { transition: filter 0.2s; }

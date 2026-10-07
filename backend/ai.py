@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from auth import get_current_active_user
-from models import User, Transaction, Loan
+from models import User, Transaction, Loan, Budget, Goal
 from ai_service import FinancialAIAgent, summarize
 
 router = APIRouter(prefix="/ai", tags=["AI Assistant"])
@@ -43,6 +43,15 @@ def load_user_data(db: Session, user: User) -> Dict:
             for t in transactions
         ],
         "loans": [{"name": l.name, "amount": l.amount} for l in loans],
+        "budgets": [
+            {"category": b.category.name if b.category else "?", "limit": b.amount}
+            for b in db.query(Budget).filter(Budget.user_id == user.id).all()
+        ],
+        "goals": [
+            {"name": g.name, "target": g.target, "saved": g.saved or 0,
+             "deadline": g.deadline.date().isoformat() if g.deadline else None}
+            for g in db.query(Goal).filter(Goal.user_id == user.id).all()
+        ],
         "income": {"active": user.active_income or 0, "passive": user.passive_income or 0},
     }
 

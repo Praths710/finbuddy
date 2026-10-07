@@ -5,7 +5,7 @@ import { Modal } from 'react-bootstrap';
 import {
   FiChevronLeft, FiChevronRight, FiLogOut, FiPlus, FiSearch, FiEdit2, FiTrash2, FiArrowDownLeft,
   FiArrowUpRight, FiCreditCard, FiPercent, FiPieChart, FiList, FiSettings, FiGrid, FiCalendar, FiInbox,
-  FiUser, FiTag,
+  FiUser, FiTag, FiEye, FiEyeOff, FiDownload, FiTarget, FiTrendingUp, FiAlertTriangle, FiSliders,
 } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi2';
 import {
@@ -41,6 +41,8 @@ function Dashboard() {
   const [transactions, setTransactions] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loans, setLoans] = useState([]);
+  const [budgets, setBudgets] = useState([]);
+  const [goals, setGoals] = useState([]);
   const [income, setIncome] = useState({ active: 0, passive: 0 });
   const [loading, setLoading] = useState(true);
 
@@ -51,6 +53,19 @@ function Dashboard() {
   const [txModal, setTxModal] = useState(null); // null | {} (new) | tx (edit)
   const [loanModal, setLoanModal] = useState(null);
   const [confirm, setConfirm] = useState(null); // { title, body, onYes }
+  const [budgetModal, setBudgetModal] = useState(null);
+  const [goalModal, setGoalModal] = useState(null);
+  const [contribModal, setContribModal] = useState(null);
+  const [privacy, setPrivacy] = useState(() => {
+    try { return localStorage.getItem('fb-privacy') === '1'; } catch { return false; }
+  });
+
+  // Privacy mode blurs every amount on screen (handy in public).
+  useEffect(() => {
+    document.body.classList.toggle('privacy-on', privacy);
+    try { localStorage.setItem('fb-privacy', privacy ? '1' : '0'); } catch { /* storage unavailable */ }
+    return () => document.body.classList.remove('privacy-on');
+  }, [privacy]);
 
   const loadTransactions = useCallback(
     () => axios.get(`${API_BASE}/transactions/?limit=5000`).then((r) => setTransactions(r.data)), []);
@@ -58,6 +73,10 @@ function Dashboard() {
     () => axios.get(`${API_BASE}/loans/?limit=500`).then((r) => setLoans(r.data)), []);
   const loadCategories = useCallback(
     () => axios.get(`${API_BASE}/categories/?limit=500`).then((r) => setCategories(r.data)), []);
+  const loadBudgets = useCallback(
+    () => axios.get(`${API_BASE}/budgets/`).then((r) => setBudgets(r.data)), []);
+  const loadGoals = useCallback(
+    () => axios.get(`${API_BASE}/goals/`).then((r) => setGoals(r.data)), []);
 
   useEffect(() => {
     let alive = true;
@@ -65,6 +84,8 @@ function Dashboard() {
       loadTransactions(),
       loadLoans(),
       loadCategories(),
+      loadBudgets(),
+      loadGoals(),
       axios.get(`${API_BASE}/user/income`).then((r) => {
         if (alive) setIncome({ active: r.data.active_income || 0, passive: r.data.passive_income || 0 });
       }),
@@ -72,7 +93,7 @@ function Dashboard() {
       .catch((err) => toast(apiError(err, "Couldn't load your data."), 'error'))
       .finally(() => alive && setLoading(false));
     return () => { alive = false; };
-  }, [loadTransactions, loadLoans, loadCategories, toast]);
+  }, [loadTransactions, loadLoans, loadCategories, loadBudgets, loadGoals, toast]);
 
   const baseIncome = (income.active || 0) + (income.passive || 0);
   const stats = useMemo(
@@ -82,6 +103,11 @@ function Dashboard() {
     () => monthStats({ transactions, loans, baseIncome, key: shiftMonth(month, -1) }),
     [transactions, loans, baseIncome, month]);
   const health = healthScore(stats);
+  const budgetUsage = useMemo(() => budgets.map((b) => {
+    const spent = stats.txs.filter((t) => t.category_id === b.category_id && !isIncomeTx(t)).reduce((a, t) => a + t.amount, 0);
+    return { ...b, spent, pct: b.amount > 0 ? (spent / b.amount) * 100 : 0 };
+  }).sort((a, b) => b.pct - a.pct), [budgets, stats]);
+  const overBudget = budgetUsage.filter((b) => b.pct > 100).length;
   const isCurrent = month === currentMonthKey();
 
   const handleLogout = () => { logout(); navigate('/login'); };
@@ -100,6 +126,10 @@ function Dashboard() {
         <div className="fb-nav-inner">
           <Brand to="/dashboard" />
           <div className="ms-auto d-flex align-items-center gap-2">
+            <button className="fb-icon-btn" onClick={() => setPrivacy((p) => !p)}
+              aria-label={privacy ? 'Show amounts' : 'Hide amounts'} title={privacy ? 'Show amounts' : 'Hide amounts (privacy mode)'}>
+              {privacy ? <FiEyeOff /> : <FiEye />}
+            </button>
             <button className="ai-trigger" onClick={() => setAiOpen(true)}>
               <HiSparkles className="spark" /> <span className="txt">Ask FinBuddy AI</span>
             </button>
@@ -146,7 +176,7 @@ function Dashboard() {
           <>
             {/* ---------------- Hero ---------------- */}
             <div className="hero-grid">
-              <NetCard stats={stats} prev={prevStats} month={month} baseIncome={baseIncome} onSetIncome={() => setTab('settings')} />
+              <NetCard stats={stats} prev={prevStats} month={month} baseIncome={baseIncome} isCurrent={isCurrent} onSetIncome={() => setTab('settings')} />
               <div className="fb-card fb-fade-in d2 text-center">
                 <div className="fb-card-title justify-content-center">Financial health</div>
                 <ScoreRing score={health.score} />
@@ -161,13 +191,13 @@ function Dashboard() {
 
             {/* ---------------- Stats ---------------- */}
             <div className="stat-grid">
-              <Stat className="d1" icon={<FiArrowDownLeft />} tint="#34d399" label="Income" value={money(stats.income)}
+              <Stat className="d1" icon={<FiArrowDownLeft />} tint="#74d6a8" label="Income" value={money(stats.income)}
                 sub={stats.extraIncome > 0 ? `incl. ${money(stats.extraIncome)} extra` : 'Salary + passive'} />
-              <Stat className="d2" icon={<FiArrowUpRight />} tint="#fb7185" label="Spending" value={money(stats.spending)}
+              <Stat className="d2" icon={<FiArrowUpRight />} tint="#f19a8f" label="Spending" value={money(stats.spending)}
                 sub={`${stats.txs.filter((t) => !isIncomeTx(t)).length} transactions`} />
-              <Stat className="d3" icon={<FiCreditCard />} tint="#fbbf24" label="EMIs" value={money(stats.emi)}
+              <Stat className="d3" icon={<FiCreditCard />} tint="#f2c14e" label="EMIs" value={money(stats.emi)}
                 sub={`${loans.filter((l) => loanActiveIn(l, month)).length} active`} />
-              <Stat className="d4" icon={<FiPercent />} tint="#a78bfa" label="Savings rate"
+              <Stat className="d4" icon={<FiPercent />} tint="#e8cf8f" label="Savings rate"
                 value={stats.income > 0 ? `${Math.round(stats.savingsRate * 100)}%` : '—'}
                 sub={stats.income > 0 ? `${money(stats.net)} kept` : 'Set income to track'} />
             </div>
@@ -178,11 +208,14 @@ function Dashboard() {
                 {[
                   ['overview', 'Overview', <FiGrid key="i" />],
                   ['transactions', 'Transactions', <FiList key="i" />],
+                  ['budgets', 'Budgets', <FiSliders key="i" />],
+                  ['goals', 'Goals', <FiTarget key="i" />],
                   ['loans', 'Loans & EMIs', <FiCalendar key="i" />],
                   ['settings', 'Settings', <FiSettings key="i" />],
                 ].map(([key, label, icon]) => (
                   <button key={key} role="tab" aria-selected={tab === key} className={tab === key ? 'active' : ''} onClick={() => setTab(key)}>
                     {icon}{label}
+                    {key === 'budgets' && overBudget > 0 && <span className="tab-badge">{overBudget}</span>}
                   </button>
                 ))}
               </div>
@@ -192,10 +225,17 @@ function Dashboard() {
               {tab === 'loans' && (
                 <button className="fb-btn" onClick={() => setLoanModal({})}><FiPlus /> Add loan / EMI</button>
               )}
+              {tab === 'budgets' && (
+                <button className="fb-btn" onClick={() => setBudgetModal({})}><FiPlus /> Set a budget</button>
+              )}
+              {tab === 'goals' && (
+                <button className="fb-btn" onClick={() => setGoalModal({})}><FiPlus /> New goal</button>
+              )}
             </div>
 
             {tab === 'overview' && (
               <Overview transactions={transactions} loans={loans} baseIncome={baseIncome} month={month} stats={stats}
+                budgetUsage={budgetUsage} goals={goals} onOpenTab={setTab}
                 onEdit={setTxModal} onViewAll={() => setTab('transactions')} onAdd={() => setTxModal({})} />
             )}
             {tab === 'transactions' && (
@@ -203,6 +243,16 @@ function Dashboard() {
                 onEdit={setTxModal}
                 onDelete={(tx) => askDelete('Delete transaction?', `“${tx.description}” for ${money(tx.amount)} will be removed.`,
                   `${API_BASE}/transactions/${tx.id}`, loadTransactions, 'Transaction deleted')} />
+            )}
+            {tab === 'budgets' && (
+              <Budgets usage={budgetUsage} month={month} onEdit={setBudgetModal} onAdd={() => setBudgetModal({})}
+                onDelete={(b) => askDelete('Remove budget?', `The ${b.category?.name || ''} limit will be removed.`,
+                  `${API_BASE}/budgets/${b.id}`, loadBudgets, 'Budget removed')} />
+            )}
+            {tab === 'goals' && (
+              <Goals goals={goals} onAdd={() => setGoalModal({})} onEdit={setGoalModal} onContribute={setContribModal}
+                onDelete={(g) => askDelete('Delete goal?', `“${g.name}” and its progress will be removed.`,
+                  `${API_BASE}/goals/${g.id}`, loadGoals, 'Goal deleted')} />
             )}
             {tab === 'loans' && (
               <Loans loans={loans} month={month} onEdit={setLoanModal} onAdd={() => setLoanModal({})}
@@ -225,6 +275,18 @@ function Dashboard() {
         <LoanModal loan={loanModal} onClose={() => setLoanModal(null)}
           onSaved={(msg) => { setLoanModal(null); loadLoans(); toast(msg); }} toast={toast} />
       )}
+      {budgetModal && (
+        <BudgetModal budget={budgetModal} categories={categories} existing={budgets} onClose={() => setBudgetModal(null)}
+          onSaved={(msg) => { setBudgetModal(null); loadBudgets(); toast(msg); }} toast={toast} />
+      )}
+      {goalModal && (
+        <GoalModal goal={goalModal} onClose={() => setGoalModal(null)}
+          onSaved={(msg) => { setGoalModal(null); loadGoals(); toast(msg); }} toast={toast} />
+      )}
+      {contribModal && (
+        <ContributeModal goal={contribModal} onClose={() => setContribModal(null)}
+          onSaved={(msg) => { setContribModal(null); loadGoals(); toast(msg); }} toast={toast} />
+      )}
       <ConfirmModal confirm={confirm} onClose={() => setConfirm(null)} />
       <AIChat open={aiOpen} onClose={() => setAiOpen(false)} user={user} health={healthScore(monthStats({ transactions, loans, baseIncome, key: currentMonthKey() }))} />
       <Toasts toasts={toasts} />
@@ -235,10 +297,16 @@ function Dashboard() {
 /* =====================================================================
    Hero pieces
    ===================================================================== */
-function NetCard({ stats, prev, month, baseIncome, onSetIncome }) {
+function NetCard({ stats, prev, month, baseIncome, isCurrent, onSetIncome }) {
   const net = useCountUp(stats.net);
   const pct = stats.income > 0 ? (stats.spent / stats.income) * 100 : 0;
   const delta = stats.spent - prev.spent;
+  // Month-end forecast: extrapolate day-to-day spending; EMIs are already fixed.
+  const now = new Date();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const projected = stats.spending / now.getDate() * daysInMonth + stats.emi;
+  const showForecast = isCurrent && stats.spending > 0 && now.getDate() < daysInMonth;
+  const overPace = stats.income > 0 && projected > stats.income;
   return (
     <div className="fb-card fb-card-hero fb-fade-in d1">
       <div className="d-flex justify-content-between align-items-start gap-2">
@@ -258,6 +326,14 @@ function NetCard({ stats, prev, month, baseIncome, onSetIncome }) {
             <span className="num">{pct.toFixed(0)}%</span>
           </div>
           <div className={`fb-progress ${pct > 100 ? 'over' : ''}`}><div style={{ width: `${Math.min(100, pct)}%` }} /></div>
+          {showForecast && (
+            <div className={`forecast ${overPace ? 'warn' : ''}`}>
+              <FiTrendingUp />
+              <span>At this pace you'll spend <b className="num">{money(projected)}</b> by month end
+                {stats.income > 0 && <> — {overPace ? 'over' : 'leaving'} <b className="num">{money(Math.abs(stats.income - projected))}</b>{overPace ? ' beyond income' : ''}</>}.
+              </span>
+            </div>
+          )}
         </>
       ) : (
         <button className="fb-chip violet mt-3" onClick={onSetIncome}><FiPlus /> Add your monthly income to see your net</button>
@@ -279,7 +355,7 @@ function ScoreRing({ score }) {
       <svg width="132" height="132" viewBox="0 0 132 132" aria-hidden="true">
         <defs>
           <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#c4b5fd" /><stop offset="100%" stopColor="#6366f1" />
+            <stop offset="0%" stopColor="#f3dfa2" /><stop offset="100%" stopColor="#9c7a24" />
           </linearGradient>
         </defs>
         <circle cx="66" cy="66" r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="10" />
@@ -332,7 +408,7 @@ function ChartTooltip({ active, payload, label }) {
   );
 }
 
-function Overview({ transactions, loans, baseIncome, month, stats, onEdit, onViewAll, onAdd }) {
+function Overview({ transactions, loans, baseIncome, month, stats, budgetUsage, goals, onOpenTab, onEdit, onViewAll, onAdd }) {
   const flow = useMemo(() => Array.from({ length: 6 }, (_, i) => {
     const key = shiftMonth(month, i - 5);
     const s = monthStats({ transactions, loans, baseIncome, key });
@@ -356,16 +432,16 @@ function Overview({ transactions, loans, baseIncome, month, stats, onEdit, onVie
       <div className="fb-card">
         <div className="fb-card-title"><span>Cash flow · last 6 months</span>
           <span className="d-flex gap-3 small">
-            <span className="d-flex align-items-center gap-1"><span style={{ width: 8, height: 8, borderRadius: 2, background: '#a78bfa' }} />Income</span>
-            <span className="d-flex align-items-center gap-1"><span style={{ width: 8, height: 8, borderRadius: 2, background: '#f472b6' }} />Spent</span>
+            <span className="d-flex align-items-center gap-1"><span style={{ width: 8, height: 8, borderRadius: 2, background: '#e8cf8f' }} />Income</span>
+            <span className="d-flex align-items-center gap-1"><span style={{ width: 8, height: 8, borderRadius: 2, background: '#bdb6a8' }} />Spent</span>
           </span>
         </div>
         <div style={{ height: 260 }}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={flow} barGap={4} margin={{ top: 8, right: 0, left: -12, bottom: 0 }}>
               <defs>
-                <linearGradient id="gIn" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#c4b5fd" /><stop offset="100%" stopColor="#7c3aed" /></linearGradient>
-                <linearGradient id="gOut" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#f9a8d4" /><stop offset="100%" stopColor="#db2777" /></linearGradient>
+                <linearGradient id="gIn" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#f3dfa2" /><stop offset="100%" stopColor="#8a6a1f" /></linearGradient>
+                <linearGradient id="gOut" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#efe9dc" /><stop offset="100%" stopColor="#6b665c" /></linearGradient>
               </defs>
               <XAxis dataKey="name" axisLine={false} tickLine={false} />
               <YAxis axisLine={false} tickLine={false} tickFormatter={compactMoney} width={56} />
@@ -411,6 +487,35 @@ function Overview({ transactions, loans, baseIncome, month, stats, onEdit, onVie
             </div>
           </>
         )}
+      </div>
+
+      <div className="fb-card">
+        <div className="fb-card-title"><span>Budgets</span>
+          <button className="fb-btn fb-btn-ghost fb-btn-sm" onClick={() => onOpenTab('budgets')}>{budgetUsage.length ? 'Manage' : 'Set up'}</button>
+        </div>
+        {budgetUsage.length === 0 ? (
+          <div className="small muted">Set monthly limits per category and FinBuddy will warn you before you overspend.</div>
+        ) : budgetUsage.slice(0, 4).map((b) => <BudgetBar key={b.id} b={b} compact />)}
+      </div>
+
+      <div className="fb-card">
+        <div className="fb-card-title"><span>Savings goals</span>
+          <button className="fb-btn fb-btn-ghost fb-btn-sm" onClick={() => onOpenTab('goals')}>{goals.length ? 'View all' : 'Create'}</button>
+        </div>
+        {goals.length === 0 ? (
+          <div className="small muted">Saving for a trip, a bike or an emergency fund? Create a goal and track every rupee.</div>
+        ) : goals.slice(0, 3).map((g) => {
+          const p = Math.min(100, (g.saved / g.target) * 100);
+          return (
+            <div key={g.id} className="mb-3">
+              <div className="d-flex justify-content-between small mb-1">
+                <span className="fw-semibold">{g.name}</span>
+                <span className="muted"><span className="num">{money(g.saved)}</span> / <span className="num">{money(g.target)}</span></span>
+              </div>
+              <div className="fb-progress"><div style={{ width: `${p}%` }} /></div>
+            </div>
+          );
+        })}
       </div>
 
       <div className="fb-card" style={{ gridColumn: '1 / -1' }}>
@@ -488,6 +593,20 @@ function Transactions({ transactions, categories, month, onEdit, onDelete }) {
   const totalOut = list.filter((t) => !isIncomeTx(t)).reduce((a, t) => a + t.amount, 0);
   const totalIn = list.filter(isIncomeTx).reduce((a, t) => a + t.amount, 0);
 
+  // Downloads exactly what's on screen (current filters) as a spreadsheet-friendly CSV.
+  const exportCsv = () => {
+    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const rows = [['Date', 'Description', 'Category', 'Type', 'Amount (INR)']].concat(
+      list.map((t) => [t.date.slice(0, 10), t.description, t.category?.name || 'Uncategorized',
+        isIncomeTx(t) ? 'Income' : 'Expense', t.amount]));
+    const blob = new Blob(['﻿' + rows.map((r) => r.map(esc).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `finbuddy-${scope === 'all' ? 'all-time' : month}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
   return (
     <div className="fb-card fb-fade-in">
       <div className="toolbar">
@@ -503,6 +622,9 @@ function Transactions({ transactions, categories, month, onEdit, onDelete }) {
           <button className={scope === 'month' ? 'active' : ''} onClick={() => setScope('month')}>{monthLabel(month, { month: 'short', year: 'numeric' })}</button>
           <button className={scope === 'all' ? 'active' : ''} onClick={() => setScope('all')}>All time</button>
         </div>
+        <button className="fb-btn fb-btn-ghost" onClick={exportCsv} disabled={!list.length} title="Download as CSV (opens in Excel)">
+          <FiDownload /> Export
+        </button>
       </div>
       <div className="d-flex gap-3 small muted px-2 mb-1">
         <span>{list.length} transactions</span>
@@ -524,6 +646,123 @@ function Transactions({ transactions, categories, month, onEdit, onDelete }) {
 /* =====================================================================
    Loans tab
    ===================================================================== */
+function BudgetBar({ b, compact, onEdit, onDelete }) {
+  const over = b.pct > 100;
+  const near = !over && b.pct >= 80;
+  const color = colorFor(b.category?.name);
+  return (
+    <div className={compact ? 'mb-3' : 'budget-row'}>
+      <div className="d-flex justify-content-between align-items-center gap-2 mb-2">
+        <span className="d-flex align-items-center gap-2 fw-semibold" style={{ minWidth: 0 }}>
+          {!compact && <span className="fb-dot" style={{ background: `${color}1f`, color, width: 34, height: 34 }}>{(b.category?.name || '?')[0]}</span>}
+          <span className="fb-ellipsis">{b.category?.name || 'Category'}</span>
+          {over && <span className="fb-chip danger"><FiAlertTriangle /> Over</span>}
+          {near && <span className="fb-chip warn">{Math.round(b.pct)}%</span>}
+        </span>
+        <span className="small muted text-nowrap">
+          <span className={`num ${over ? 'neg' : ''}`} style={{ color: over ? undefined : 'var(--text)' }}>{money(b.spent)}</span> of <span className="num">{money(b.amount)}</span>
+        </span>
+        {!compact && (
+          <span className="d-flex">
+            <button className="fb-icon-btn" onClick={() => onEdit(b)} aria-label="Edit budget"><FiEdit2 size={15} /></button>
+            <button className="fb-icon-btn danger" onClick={() => onDelete(b)} aria-label="Remove budget"><FiTrash2 size={15} /></button>
+          </span>
+        )}
+      </div>
+      <div className={`fb-progress ${over ? 'over' : near ? 'near' : ''}`}><div style={{ width: `${Math.min(100, b.pct)}%` }} /></div>
+      {!compact && (
+        <div className="small faint mt-2">
+          {over ? `${money(b.spent - b.amount)} over the limit` : `${money(b.amount - b.spent)} left this month`}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Budgets({ usage, month, onEdit, onDelete, onAdd }) {
+  if (usage.length === 0) {
+    return (
+      <div className="fb-card fb-fade-in">
+        <Empty icon={<FiSliders />} title="No budgets yet" text="Give each category a monthly limit — food, shopping, fun — and stay ahead of overspending."
+          action={<button className="fb-btn fb-btn-sm mt-3" onClick={onAdd}><FiPlus /> Set a budget</button>} />
+      </div>
+    );
+  }
+  const limit = usage.reduce((a, b) => a + b.amount, 0);
+  const spent = usage.reduce((a, b) => a + Math.min(b.spent, b.amount * 10), 0);
+  return (
+    <div className="fb-fade-in">
+      <div className="fb-card fb-card-hero mb-3">
+        <div className="d-flex justify-content-between align-items-end flex-wrap gap-3">
+          <div>
+            <div className="eyebrow">Budgeted · {monthLabel(month, { month: 'long' })}</div>
+            <div className="serif num" style={{ fontSize: 44, lineHeight: 1.1, marginTop: 6 }}>{money(spent)} <span className="muted" style={{ fontSize: 22 }}>/ {money(limit)}</span></div>
+          </div>
+          <div className="small muted">{usage.filter((b) => b.pct > 100).length} over · {usage.filter((b) => b.pct <= 100).length} on track</div>
+        </div>
+        <div className={`fb-progress mt-3 ${spent > limit ? 'over' : ''}`}><div style={{ width: `${Math.min(100, (spent / limit) * 100)}%` }} /></div>
+      </div>
+      <div className="budget-grid">
+        {usage.map((b) => <div key={b.id} className="fb-card"><BudgetBar b={b} onEdit={onEdit} onDelete={onDelete} /></div>)}
+      </div>
+    </div>
+  );
+}
+
+function Goals({ goals, onAdd, onEdit, onContribute, onDelete }) {
+  if (goals.length === 0) {
+    return (
+      <div className="fb-card fb-fade-in">
+        <Empty icon={<FiTarget />} title="No savings goals yet" text="A new phone, a Goa trip, an emergency fund — set a target and watch it fill up."
+          action={<button className="fb-btn fb-btn-sm mt-3" onClick={onAdd}><FiPlus /> New goal</button>} />
+      </div>
+    );
+  }
+  const today = new Date();
+  return (
+    <div className="loan-grid fb-fade-in">
+      {goals.map((g) => {
+        const p = Math.min(100, (g.saved / g.target) * 100);
+        const left = Math.max(0, g.target - g.saved);
+        const monthsLeft = g.deadline ? Math.max(1, monthsBetween(today.toISOString(), g.deadline)) : null;
+        const done = left <= 0;
+        const r = 34, c = 2 * Math.PI * r;
+        return (
+          <div key={g.id} className={`fb-card ${done ? 'fb-card-hero' : ''}`}>
+            <div className="d-flex gap-3 align-items-center">
+              <div className="goal-ring">
+                <svg width="84" height="84" viewBox="0 0 84 84" aria-hidden="true">
+                  <circle cx="42" cy="42" r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="7" />
+                  <circle cx="42" cy="42" r={r} fill="none" stroke="url(#ringGrad)" strokeWidth="7" strokeLinecap="round"
+                    strokeDasharray={c} strokeDashoffset={c * (1 - p / 100)} transform="rotate(-90 42 42)" />
+                </svg>
+                <span className="num">{Math.round(p)}%</span>
+              </div>
+              <div style={{ minWidth: 0 }} className="flex-grow-1">
+                <div className="fw-semibold fb-ellipsis" style={{ fontSize: 16 }}>{g.name}</div>
+                <div className="serif num" style={{ fontSize: 28, lineHeight: 1.15 }}>{money(g.saved)}</div>
+                <div className="small faint">of <span className="num">{money(g.target)}</span></div>
+              </div>
+            </div>
+            <div className="small muted mt-3">
+              {done ? '🎉 Goal reached — beautifully done.'
+                : monthsLeft ? <>Save <b className="num" style={{ color: 'var(--text)' }}>{money(left / monthsLeft)}</b>/month to hit it by {fmtDay(g.deadline, { month: 'short', year: 'numeric' })}</>
+                  : <><span className="num">{money(left)}</span> to go</>}
+            </div>
+            <div className="d-flex justify-content-between align-items-center mt-3">
+              <button className="fb-btn fb-btn-sm" onClick={() => onContribute(g)}><FiPlus /> Add money</button>
+              <span className="d-flex">
+                <button className="fb-icon-btn" onClick={() => onEdit(g)} aria-label="Edit goal"><FiEdit2 size={15} /></button>
+                <button className="fb-icon-btn danger" onClick={() => onDelete(g)} aria-label="Delete goal"><FiTrash2 size={15} /></button>
+              </span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function monthsBetween(a, b) {
   const [y1, m1] = monthKey(a).split('-').map(Number);
   const [y2, m2] = monthKey(b).split('-').map(Number);
@@ -840,6 +1079,161 @@ function LoanModal({ loan, onClose, onSaved, toast }) {
   );
 }
 
+function BudgetModal({ budget, categories, existing, onClose, onSaved, toast }) {
+  const editing = Boolean(budget.id);
+  const taken = new Set(existing.map((b) => b.category_id));
+  const options = categories.filter((c) => !isIncomeCategory(c.name) && (editing ? c.id === budget.category_id : !taken.has(c.id)));
+  const [categoryId, setCategoryId] = useState(editing ? String(budget.category_id) : String(options[0]?.id || ''));
+  const [amount, setAmount] = useState(editing ? String(budget.amount) : '');
+  const [saving, setSaving] = useState(false);
+
+  const submit = (e) => {
+    e.preventDefault();
+    const value = parseFloat(amount);
+    if (!categoryId) { toast('Every category already has a budget', 'error'); return; }
+    if (!(value > 0)) { toast('Enter a monthly limit greater than zero', 'error'); return; }
+    setSaving(true);
+    axios.put(`${API_BASE}/budgets/`, { category_id: Number(categoryId), amount: value })
+      .then(() => onSaved(editing ? 'Budget updated' : 'Budget set'))
+      .catch((err) => { toast(apiError(err), 'error'); setSaving(false); });
+  };
+
+  return (
+    <Modal show onHide={onClose} centered>
+      <Modal.Header closeButton><Modal.Title>{editing ? 'Edit budget' : 'Set a budget'}</Modal.Title></Modal.Header>
+      <form onSubmit={submit}>
+        <Modal.Body>
+          <label className="fb-label" htmlFor="bc">Category</label>
+          <select id="bc" className="form-select mb-3" value={categoryId} onChange={(e) => setCategoryId(e.target.value)} disabled={editing}>
+            {options.length === 0 && <option value="">All categories have budgets</option>}
+            {options.map((c) => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
+          </select>
+          <label className="fb-label" htmlFor="ba">Monthly limit</label>
+          <div className="fb-input-wrap amount-wrap">
+            <span className="prefix">₹</span>
+            <input id="ba" className="fb-input amount-input num" type="number" min="0" step="any" inputMode="decimal" placeholder="0"
+              value={amount} onChange={(e) => setAmount(e.target.value)} required autoFocus />
+          </div>
+          <div className="small faint mt-2">You'll see a warning at 80% and an alert once you go over.</div>
+        </Modal.Body>
+        <Modal.Footer>
+          <button type="button" className="fb-btn fb-btn-ghost" onClick={onClose}>Cancel</button>
+          <button type="submit" className="fb-btn" disabled={saving}>{saving ? <Spinner /> : editing ? 'Save changes' : 'Set budget'}</button>
+        </Modal.Footer>
+      </form>
+    </Modal>
+  );
+}
+
+function GoalModal({ goal, onClose, onSaved, toast }) {
+  const editing = Boolean(goal.id);
+  const [form, setForm] = useState({
+    name: goal.name || '',
+    target: editing ? String(goal.target) : '',
+    saved: editing ? String(goal.saved || 0) : '',
+    deadline: goal.deadline ? goal.deadline.slice(0, 10) : '',
+  });
+  const [saving, setSaving] = useState(false);
+
+  const submit = (e) => {
+    e.preventDefault();
+    const target = parseFloat(form.target);
+    if (!(target > 0)) { toast('Enter a target greater than zero', 'error'); return; }
+    const payload = {
+      name: form.name.trim(),
+      target,
+      saved: Math.max(0, parseFloat(form.saved) || 0),
+      deadline: form.deadline ? toApiDate(form.deadline) : null,
+    };
+    setSaving(true);
+    const req = editing ? axios.put(`${API_BASE}/goals/${goal.id}`, payload) : axios.post(`${API_BASE}/goals/`, payload);
+    req.then(() => onSaved(editing ? 'Goal updated' : 'Goal created'))
+      .catch((err) => { toast(apiError(err), 'error'); setSaving(false); });
+  };
+
+  return (
+    <Modal show onHide={onClose} centered>
+      <Modal.Header closeButton><Modal.Title>{editing ? 'Edit goal' : 'New savings goal'}</Modal.Title></Modal.Header>
+      <form onSubmit={submit}>
+        <Modal.Body>
+          <label className="fb-label" htmlFor="gn">What are you saving for?</label>
+          <input id="gn" className="fb-input mb-3" placeholder="e.g. Emergency fund" value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })} required autoFocus maxLength={120} />
+          <div className="row g-3 mb-3">
+            <div className="col-6">
+              <label className="fb-label" htmlFor="gt">Target</label>
+              <div className="fb-input-wrap"><span className="prefix">₹</span>
+                <input id="gt" className="fb-input num" type="number" min="0" step="any" inputMode="decimal" placeholder="0"
+                  value={form.target} onChange={(e) => setForm({ ...form, target: e.target.value })} required /></div>
+            </div>
+            <div className="col-6">
+              <label className="fb-label" htmlFor="gs">Already saved</label>
+              <div className="fb-input-wrap"><span className="prefix">₹</span>
+                <input id="gs" className="fb-input num" type="number" min="0" step="any" inputMode="decimal" placeholder="0"
+                  value={form.saved} onChange={(e) => setForm({ ...form, saved: e.target.value })} /></div>
+            </div>
+          </div>
+          <label className="fb-label" htmlFor="gd">Target date <span className="faint">(optional)</span></label>
+          <input id="gd" className="fb-input" type="date" min={todayLocal()} value={form.deadline}
+            onChange={(e) => setForm({ ...form, deadline: e.target.value })} />
+        </Modal.Body>
+        <Modal.Footer>
+          <button type="button" className="fb-btn fb-btn-ghost" onClick={onClose}>Cancel</button>
+          <button type="submit" className="fb-btn" disabled={saving}>{saving ? <Spinner /> : editing ? 'Save changes' : 'Create goal'}</button>
+        </Modal.Footer>
+      </form>
+    </Modal>
+  );
+}
+
+function ContributeModal({ goal, onClose, onSaved, toast }) {
+  const [mode, setMode] = useState('add');
+  const [amount, setAmount] = useState('');
+  const [saving, setSaving] = useState(false);
+  const left = Math.max(0, goal.target - (goal.saved || 0));
+
+  const submit = (e) => {
+    e.preventDefault();
+    const value = parseFloat(amount);
+    if (!(value > 0)) { toast('Enter an amount greater than zero', 'error'); return; }
+    setSaving(true);
+    axios.post(`${API_BASE}/goals/${goal.id}/contribute`, { amount: mode === 'add' ? value : -value })
+      .then((r) => onSaved(r.data.saved >= r.data.target ? `🎉 “${goal.name}” reached!` : mode === 'add' ? `Added ${money(value)} to ${goal.name}` : `Withdrew ${money(value)}`))
+      .catch((err) => { toast(apiError(err), 'error'); setSaving(false); });
+  };
+
+  return (
+    <Modal show onHide={onClose} centered>
+      <Modal.Header closeButton><Modal.Title>{goal.name}</Modal.Title></Modal.Header>
+      <form onSubmit={submit}>
+        <Modal.Body>
+          <div className="fb-seg income type-toggle mb-3">
+            <button type="button" className={`is-income ${mode === 'add' ? 'active' : ''}`} onClick={() => setMode('add')}><FiArrowDownLeft /> Add money</button>
+            <button type="button" className={`is-expense ${mode === 'withdraw' ? 'active' : ''}`} onClick={() => setMode('withdraw')}><FiArrowUpRight /> Withdraw</button>
+          </div>
+          <div className="fb-input-wrap amount-wrap">
+            <span className="prefix">₹</span>
+            <input className="fb-input amount-input num" type="number" min="0" step="any" inputMode="decimal" placeholder="0"
+              value={amount} onChange={(e) => setAmount(e.target.value)} required autoFocus aria-label="Amount" />
+          </div>
+          {mode === 'add' && left > 0 && (
+            <div className="d-flex gap-2 flex-wrap mt-3">
+              {[500, 1000, 5000].filter((v) => v < left).map((v) => (
+                <button key={v} type="button" className="fb-chip" onClick={() => setAmount(String(v))}>+{money(v)}</button>
+              ))}
+              <button type="button" className="fb-chip violet" onClick={() => setAmount(String(left))}>Finish it · {money(left)}</button>
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <button type="button" className="fb-btn fb-btn-ghost" onClick={onClose}>Cancel</button>
+          <button type="submit" className="fb-btn" disabled={saving}>{saving ? <Spinner /> : mode === 'add' ? 'Add to goal' : 'Withdraw'}</button>
+        </Modal.Footer>
+      </form>
+    </Modal>
+  );
+}
+
 function ConfirmModal({ confirm, onClose }) {
   const [busy, setBusy] = useState(false);
   if (!confirm) return null;
@@ -857,7 +1251,7 @@ function ConfirmModal({ confirm, onClose }) {
         <div className="small muted mt-1 mb-4">{confirm.body}</div>
         <div className="d-flex gap-2">
           <button className="fb-btn fb-btn-ghost flex-grow-1" onClick={onClose}>Cancel</button>
-          <button className="fb-btn flex-grow-1" style={{ background: 'linear-gradient(135deg,#fb7185,#e11d48)', boxShadow: 'none' }}
+          <button className="fb-btn flex-grow-1" style={{ background: 'linear-gradient(135deg,#f19a8f,#c2463a)', boxShadow: 'none', color: '#fff' }}
             onClick={yes} disabled={busy}>{busy ? <Spinner /> : 'Delete'}</button>
         </div>
       </Modal.Body>

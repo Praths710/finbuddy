@@ -2,32 +2,34 @@
    FinBuddy design system
    ========================================================================== */
 :root {
-  --ink-0: #07070b;
-  --ink-1: #0e0e15;
-  --ink-2: #15151f;
-  --ink-3: #1d1d2a;
-  --line: rgba(255, 255, 255, 0.07);
-  --line-strong: rgba(255, 255, 255, 0.13);
-  --text: #eeedf5;
-  --muted: #9897ad;
-  --faint: #636178;
+  /* Black & gold */
+  --ink-0: #050505;
+  --ink-1: #0c0b09;
+  --ink-2: #14120e;
+  --ink-3: #1d1a14;
+  --line: rgba(232, 207, 143, 0.09);
+  --line-strong: rgba(232, 207, 143, 0.17);
+  --text: #f4eee1;
+  --muted: #a8a090;
+  --faint: #6e685b;
 
-  --violet: #8b5cf6;
-  --violet-soft: #a78bfa;
-  --indigo: #6366f1;
-  --grad: linear-gradient(135deg, #b69cff 0%, #8b5cf6 45%, #6366f1 100%);
-  --grad-text: linear-gradient(120deg, #e9e2ff 0%, #b69cff 45%, #818cf8 100%);
-  --gold: #e9cf9a;
+  --violet: #d4af37;       /* primary accent (gold) — name kept for existing class hooks */
+  --violet-soft: #e8cf8f;  /* champagne */
+  --indigo: #9c7a24;       /* antique gold */
+  --grad: linear-gradient(135deg, #f8e7ac 0%, #d9b44a 42%, #a8842c 100%);
+  --grad-text: linear-gradient(110deg, #fff6d8 0%, #ecc964 42%, #b8902e 100%);
+  --gold: #e8cf8f;
+  --on-gold: #120e05;
 
-  --pos: #34d399;
-  --neg: #fb7185;
-  --warn: #fbbf24;
+  --pos: #74d6a8;
+  --neg: #f19a8f;
+  --warn: #f2c14e;
 
-  --radius: 18px;
+  --radius: 16px;
   --radius-sm: 12px;
-  --shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 20px 50px -20px rgba(0, 0, 0, 0.7);
-  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --serif: 'Instrument Serif', Georgia, serif;
+  --shadow: 0 1px 0 rgba(255, 236, 190, 0.05) inset, 0 24px 60px -24px rgba(0, 0, 0, 0.9);
+  --font: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --serif: 'Bodoni Moda', 'Didot', Georgia, serif;
 
   /* Bootstrap overrides */
   --bs-body-bg: var(--ink-0);
@@ -36,7 +38,7 @@
   --bs-border-color: var(--line);
   --bs-secondary-color: var(--muted);
   --bs-link-color: var(--violet-soft);
-  --bs-link-hover-color: #c4b5fd;
+  --bs-link-hover-color: #f3dfa2;
 }
 [data-bs-theme='dark'] {
   --bs-body-bg: var(--ink-0);
@@ -62,15 +64,15 @@ body::before {
   pointer-events: none;
   z-index: -1;
   background:
-    radial-gradient(900px 500px at 85% -10%, rgba(139, 92, 246, 0.16), transparent 60%),
-    radial-gradient(700px 500px at -10% 30%, rgba(99, 102, 241, 0.09), transparent 60%),
+    radial-gradient(900px 520px at 85% -12%, rgba(212, 175, 55, 0.11), transparent 60%),
+    radial-gradient(700px 500px at -10% 35%, rgba(156, 122, 36, 0.06), transparent 60%),
     var(--ink-0);
 }
-::selection { background: rgba(139, 92, 246, 0.45); }
+::selection { background: rgba(212, 175, 55, 0.4); color: #fff; }
 a { text-decoration: none; }
 
 /* ---------- Typography ---------- */
-.serif { font-family: var(--serif); font-weight: 400; letter-spacing: -0.01em; }
+.serif { font-family: var(--serif); font-weight: 500; letter-spacing: -0.02em; font-optical-sizing: auto; }
 .serif em, em.serif { font-style: italic; }
 .grad-text {
   background: var(--grad-text);
@@ -104,10 +106,10 @@ a { text-decoration: none; }
 }
 .fb-card-hero {
   background:
-    radial-gradient(600px 260px at 100% 0%, rgba(139, 92, 246, 0.28), transparent 60%),
-    radial-gradient(400px 200px at 0% 100%, rgba(99, 102, 241, 0.14), transparent 60%),
+    radial-gradient(600px 260px at 100% 0%, rgba(212, 175, 55, 0.28), transparent 60%),
+    radial-gradient(400px 200px at 0% 100%, rgba(156, 122, 36, 0.14), transparent 60%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
-  border: 1px solid rgba(167, 139, 250, 0.22);
+  border: 1px solid rgba(232, 207, 143, 0.22);
 }
 .fb-card-title {
   font-size: 13px;
@@ -131,14 +133,14 @@ a { text-decoration: none; }
   padding: 11px 18px;
   font-weight: 600;
   font-size: 14px;
-  color: #fff;
+  color: var(--on-gold);
   background: var(--grad);
-  box-shadow: 0 8px 24px -8px rgba(139, 92, 246, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  box-shadow: 0 8px 24px -8px rgba(212, 175, 55, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.25);
   transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s;
   cursor: pointer;
   white-space: nowrap;
 }
-.fb-btn:hover { transform: translateY(-1px); box-shadow: 0 12px 30px -8px rgba(139, 92, 246, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.25); color: #fff; }
+.fb-btn:hover { transform: translateY(-1px); box-shadow: 0 12px 30px -8px rgba(212, 175, 55, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.25); color: var(--on-gold); }
 .fb-btn:active { transform: translateY(0); }
 .fb-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 .fb-btn-lg { padding: 14px 26px; font-size: 15px; border-radius: 14px; }
@@ -185,8 +187,8 @@ a { text-decoration: none; }
 .fb-input:focus,
 .form-control:focus,
 .form-select:focus {
-  border-color: rgba(167, 139, 250, 0.7) !important;
-  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.16) !important;
+  border-color: rgba(232, 207, 143, 0.7) !important;
+  box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.16) !important;
   background: rgba(255, 255, 255, 0.05) !important;
 }
 .form-select option { background: var(--ink-2); color: var(--text); }
@@ -246,10 +248,10 @@ input[type='date'].fb-input { color-scheme: dark; }
   background: rgba(255, 255, 255, 0.03);
   color: var(--muted);
 }
-.fb-chip.violet { color: #c4b5fd; border-color: rgba(167, 139, 250, 0.35); background: rgba(139, 92, 246, 0.1); }
+.fb-chip.violet { color: #f3dfa2; border-color: rgba(232, 207, 143, 0.35); background: rgba(212, 175, 55, 0.1); }
 .fb-chip.gold { color: var(--gold); border-color: rgba(233, 207, 154, 0.3); background: rgba(233, 207, 154, 0.07); }
 button.fb-chip { cursor: pointer; transition: all 0.15s; }
-button.fb-chip:hover { color: var(--text); border-color: rgba(167, 139, 250, 0.5); }
+button.fb-chip:hover { color: var(--text); border-color: rgba(232, 207, 143, 0.5); }
 
 /* ---------- Navbar ---------- */
 .fb-nav {
@@ -266,14 +268,14 @@ button.fb-chip:hover { color: var(--text); border-color: rgba(167, 139, 250, 0.5
 }
 .fb-brand { display: inline-flex; align-items: center; gap: 10px; color: var(--text); }
 .fb-brand:hover { color: var(--text); }
-.fb-brand img { width: 34px; height: 34px; object-fit: contain; filter: drop-shadow(0 4px 14px rgba(139, 92, 246, 0.55)); }
-.fb-brand span { font-family: var(--serif); font-size: 25px; line-height: 1; letter-spacing: -0.01em; }
+.fb-brand img { width: 34px; height: 34px; object-fit: contain; filter: grayscale(1) sepia(1) saturate(3.4) hue-rotate(-6deg) brightness(1.18) drop-shadow(0 4px 14px rgba(212, 175, 55, 0.45)); }
+.fb-brand span { font-family: var(--serif); font-size: 23px; line-height: 1; letter-spacing: 0.01em; font-weight: 600; }
 
 .fb-avatar {
   width: 36px; height: 36px; border-radius: 50%;
   display: grid; place-items: center;
   background: var(--grad);
-  color: #fff; font-weight: 600; font-size: 13px;
+  color: var(--on-gold); font-weight: 600; font-size: 13px;
   border: 2px solid rgba(255, 255, 255, 0.12);
   cursor: pointer;
 }
@@ -321,14 +323,14 @@ button.fb-chip:hover { color: var(--text); border-color: rgba(167, 139, 250, 0.5
 /* ---------- Progress ---------- */
 .fb-progress { height: 8px; border-radius: 99px; background: rgba(255, 255, 255, 0.07); overflow: hidden; }
 .fb-progress > div { height: 100%; border-radius: 99px; background: var(--grad); transition: width 0.6s cubic-bezier(.2,.8,.2,1); }
-.fb-progress.over > div { background: linear-gradient(90deg, #fb7185, #f43f5e); }
+.fb-progress.over > div { background: linear-gradient(90deg, #f19a8f, #c2463a); }
 
 /* ---------- Empty state ---------- */
 .fb-empty { text-align: center; padding: 38px 16px; color: var(--muted); }
 .fb-empty .icon {
   width: 52px; height: 52px; margin: 0 auto 14px;
   border-radius: 16px; display: grid; place-items: center;
-  background: rgba(139, 92, 246, 0.12); color: var(--violet-soft); font-size: 20px;
+  background: rgba(212, 175, 55, 0.12); color: var(--violet-soft); font-size: 20px;
 }
 
 /* ---------- Modal ---------- */
@@ -342,7 +344,7 @@ button.fb-chip:hover { color: var(--text); border-color: rgba(167, 139, 250, 0.5
 }
 .modal-header, .modal-footer { border-color: var(--line) !important; padding: 18px 22px; }
 .modal-body { padding: 22px; }
-.modal-title { font-family: var(--serif); font-size: 26px; font-weight: 400; }
+.modal-title { font-family: var(--serif); font-size: 26px; font-weight: 500; }
 .btn-close { filter: invert(1) grayscale(1) brightness(1.4); opacity: 0.5; }
 
 /* ---------- Toast ---------- */
@@ -363,9 +365,9 @@ button.fb-chip:hover { color: var(--text); border-color: rgba(167, 139, 250, 0.5
 
 /* ---------- Splash / loaders ---------- */
 .fb-splash { min-height: 100vh; display: grid; place-items: center; text-align: center; }
-.fb-splash img { width: 56px; animation: fb-pulse 1.6s ease-in-out infinite; filter: drop-shadow(0 8px 26px rgba(139, 92, 246, 0.6)); }
+.fb-splash img { width: 56px; animation: fb-pulse 1.6s ease-in-out infinite; filter: grayscale(1) sepia(1) saturate(3.4) hue-rotate(-6deg) brightness(1.18) drop-shadow(0 8px 26px rgba(212, 175, 55, 0.5)); }
 .fb-skeleton { border-radius: 10px; background: linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.08), rgba(255,255,255,0.04)); background-size: 200% 100%; animation: fb-shimmer 1.4s infinite; }
-.fb-spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; animation: fb-spin 0.7s linear infinite; }
+.fb-spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(128,128,128,0.35); border-top-color: currentColor; animation: fb-spin 0.7s linear infinite; }
 
 /* ---------- Animations ---------- */
 @keyframes fb-pop { from { opacity: 0; transform: translateY(-6px) scale(0.98); } to { opacity: 1; transform: none; } }
@@ -394,3 +396,8 @@ button.fb-chip:hover { color: var(--text); border-color: rgba(167, 139, 250, 0.5
   font-size: 13px;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
 }
+
+/* ---------- Status variants ---------- */
+.fb-chip.danger { color: var(--neg); border-color: rgba(241, 154, 143, 0.35); background: rgba(241, 154, 143, 0.08); }
+.fb-chip.warn { color: var(--warn); border-color: rgba(242, 193, 78, 0.35); background: rgba(242, 193, 78, 0.08); }
+.fb-progress.near > div { background: linear-gradient(90deg, #f2c14e, #e0962b); }

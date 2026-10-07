@@ -12,7 +12,7 @@
   width: min(440px, 100vw);
   display: flex; flex-direction: column;
   background:
-    radial-gradient(500px 300px at 100% 0%, rgba(139, 92, 246, 0.18), transparent 60%),
+    radial-gradient(500px 300px at 100% 0%, rgba(212, 175, 55, 0.18), transparent 60%),
     var(--ink-1);
   border-left: 1px solid var(--line-strong);
   box-shadow: -30px 0 80px rgba(0, 0, 0, 0.6);
@@ -25,8 +25,8 @@
 .ai-orb {
   width: 38px; height: 38px; border-radius: 12px; flex: none;
   display: grid; place-items: center;
-  background: var(--grad); color: #fff;
-  box-shadow: 0 8px 24px -6px rgba(139, 92, 246, 0.8);
+  background: var(--grad); color: var(--on-gold);
+  box-shadow: 0 8px 24px -6px rgba(212, 175, 55, 0.8);
 }
 .ai-title { font-family: var(--serif); font-size: 24px; line-height: 1; }
 .ai-status { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; margin-top: 4px; }
@@ -47,13 +47,13 @@
   display: flex; align-items: center; gap: 10px;
   transition: all 0.15s;
 }
-.ai-suggest button:hover { border-color: rgba(167, 139, 250, 0.5); background: rgba(139, 92, 246, 0.08); }
+.ai-suggest button:hover { border-color: rgba(232, 207, 143, 0.5); background: rgba(212, 175, 55, 0.08); }
 .ai-suggest svg { color: var(--violet-soft); flex: none; }
 
 .ai-msg { display: flex; gap: 10px; max-width: 100%; animation: fb-rise 0.25s ease both; }
 .ai-msg.user { justify-content: flex-end; }
 .ai-bubble { padding: 11px 14px; border-radius: 16px; font-size: 14.5px; line-height: 1.55; max-width: 86%; overflow-wrap: anywhere; }
-.ai-msg.user .ai-bubble { background: var(--grad); color: #fff; border-bottom-right-radius: 5px; }
+.ai-msg.user .ai-bubble { background: var(--grad); color: var(--on-gold); font-weight: 500; border-bottom-right-radius: 5px; }
 .ai-msg.ai .ai-bubble { background: rgba(255, 255, 255, 0.04); border: 1px solid var(--line); border-bottom-left-radius: 5px; }
 .ai-msg.error .ai-bubble { border-color: rgba(251, 113, 133, 0.35); background: rgba(251, 113, 133, 0.06); }
 .ai-bubble p { margin: 0 0 8px; }
@@ -62,7 +62,7 @@
 .ai-bubble li { margin: 2px 0; }
 .ai-bubble li::marker { color: var(--violet-soft); }
 .ai-bubble strong { color: #fff; font-weight: 600; }
-.ai-mini { width: 28px; height: 28px; border-radius: 9px; flex: none; display: grid; place-items: center; background: rgba(139, 92, 246, 0.16); color: var(--violet-soft); font-size: 14px; margin-top: 2px; }
+.ai-mini { width: 28px; height: 28px; border-radius: 9px; flex: none; display: grid; place-items: center; background: rgba(212, 175, 55, 0.16); color: var(--violet-soft); font-size: 14px; margin-top: 2px; }
 
 .ai-typing { display: inline-flex; gap: 4px; padding: 4px 2px; }
 .ai-typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--violet-soft); animation: ai-bounce 1.2s infinite ease-in-out; }
@@ -79,7 +79,7 @@
   background: rgba(255, 255, 255, 0.035);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-.ai-input:focus-within { border-color: rgba(167, 139, 250, 0.7); box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.14); }
+.ai-input:focus-within { border-color: rgba(232, 207, 143, 0.7); box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.14); }
 .ai-input textarea {
   flex: 1; resize: none; border: 0; outline: none; background: transparent; color: var(--text);
   font-size: 14.5px; line-height: 1.45; padding: 8px 0; max-height: 120px; font-family: inherit;

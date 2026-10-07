@@ -1,4 +1,4 @@
-﻿from pydantic import BaseModel, EmailStr
+﻿from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime
 from typing import Optional, List
 
@@ -77,5 +77,33 @@ class Loan(LoanBase):
     start_date: datetime
     user_id: int
     
+    class Config:
+        from_attributes = True
+# -------------------- Budget schemas --------------------
+class BudgetCreate(BaseModel):
+    category_id: int
+    amount: float = Field(gt=0)
+
+class Budget(BudgetCreate):
+    id: int
+    category: Optional[Category] = None
+
+    class Config:
+        from_attributes = True
+
+# -------------------- Goal schemas --------------------
+class GoalCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    target: float = Field(gt=0)
+    saved: float = Field(default=0.0, ge=0)
+    deadline: Optional[datetime] = None
+
+class GoalContribution(BaseModel):
+    amount: float  # negative to withdraw
+
+class Goal(GoalCreate):
+    id: int
+    created_at: Optional[datetime] = None
+
     class Config:
         from_attributes = True

@@ -64,9 +64,9 @@ function About() {
                 {[62, 48, 70, 52, 66, 44, 74, 50, 80, 46, 76, 40].map((h, i) => <div key={i} style={{ height: `${h}%` }} />)}
               </div>
               {[
-                ['F', '#a78bfa', 'Food & Drink', '₹8,420'],
+                ['F', '#e8cf8f', 'Food & Drink', '₹8,420'],
                 ['T', '#38bdf8', 'Transport', '₹3,150'],
-                ['L', '#fbbf24', 'Home loan EMI', '₹21,500'],
+                ['L', '#f2c14e', 'Home loan EMI', '₹21,500'],
               ].map(([l, c, n, a]) => (
                 <div key={n} className="lp-row">
                   <span className="dot" style={{ background: `${c}22`, color: c }}>{l}</span>

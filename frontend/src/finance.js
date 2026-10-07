@@ -62,7 +62,7 @@ export function healthScore({ income, emi, savingsRate }) {
 }
 
 // Stable colour per category name.
-export const PALETTE = ['#a78bfa', '#818cf8', '#f472b6', '#34d399', '#fbbf24', '#38bdf8', '#fb923c', '#e879f9', '#2dd4bf', '#f87171'];
+export const PALETTE = ['#d9b44a', '#e8cf8f', '#b5895a', '#74d6a8', '#d98f7e', '#8fb3d9', '#c7b8e6', '#f0a860', '#5fb8a1', '#a8a090'];
 export const colorFor = (name = '') => {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;

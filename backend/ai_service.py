@@ -79,6 +79,7 @@ def summarize(user_data: Dict[str, Any]) -> Dict[str, Any]:
         "emi": monthly_emi,
         "savings_rate": savings_rate,
         "top_categories": sorted(by_category.items(), key=lambda x: x[1], reverse=True)[:5],
+        "all_categories": list(by_category.items()),
         "history": {m: months[m] for m in sorted(months)[-6:]},
         "health_score": {"score": score, "rating": rating},
     }
@@ -98,6 +99,12 @@ def build_context(user_data: Dict[str, Any], s: Dict[str, Any]) -> str:
             f"{m}: ₹{v['spent']:.0f} / ₹{v['income']:.0f}" for m, v in s["history"].items()) or "none"),
         "Loans/EMIs: " + (", ".join(
             f"{l['name']} ₹{l['amount']:.0f}/mo" for l in user_data.get("loans", [])) or "none"),
+        "Monthly budgets (limit vs spent this month): " + (", ".join(
+            f"{b['category']} ₹{b['limit']:.0f} vs ₹{dict(s['all_categories']).get(b['category'], 0):.0f}"
+            for b in user_data.get("budgets", [])) or "none set"),
+        "Savings goals: " + (", ".join(
+            f"{g['name']} ₹{g['saved']:.0f}/₹{g['target']:.0f}" + (f" by {g['deadline']}" if g['deadline'] else "")
+            for g in user_data.get("goals", [])) or "none"),
         "Recent transactions:",
         *[f"- {t['date'][:10]} {t['description']} ({t['category']}) ₹{t['amount']:.0f}" for t in recent],
     ]
