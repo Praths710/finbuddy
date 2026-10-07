@@ -10,11 +10,21 @@ import auth
 from database import get_db, SessionLocal, engine
 from categorizer import suggest_category
 from sqlalchemy import text
-
-# Uncomment when AI chat is ready
-# from ai import router as ai_router
+from ai import router as ai_router
 
 models.Base.metadata.create_all(bind=engine)
+
+# -------------------- SCHEMA MIGRATIONS --------------------
+# create_all() never adds columns to tables that already exist, so the
+# production Postgres DB gets the newer columns here (idempotent).
+if engine.dialect.name == "postgresql":
+    with engine.begin() as conn:
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS active_income FLOAT DEFAULT 0.0;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS passive_income FLOAT DEFAULT 0.0;"))
+        conn.execute(text("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id);"))
+        conn.execute(text("ALTER TABLE loans ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id);"))
+        conn.execute(text("ALTER TABLE categories ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id);"))
+# ------------------------------------------------------------
 
 app = FastAPI()
 
@@ -33,51 +43,11 @@ app.add_middleware(
 )
 # ------------------------------------------------------------
 
-# Uncomment when AI is ready
-# app.include_router(ai_router)
+app.include_router(ai_router)
 
 @app.get("/")
 def root():
     return {"message": "FinMind API is running"}
-
-# -------------------- TEMPORARY DEBUG ENDPOINTS --------------------
-@app.get("/list-users")
-def list_users(db: Session = Depends(get_db)):
-    users = db.query(models.User).all()
-    return [{"id": u.id, "email": u.email} for u in users]
-
-@app.delete("/delete-user/{user_id}")
-def delete_user(user_id: int, db: Session = Depends(get_db)):
-    user = db.query(models.User).filter(models.User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    db.delete(user)
-    db.commit()
-    return {"message": f"User {user_id} deleted"}
-
-@app.get("/fix-db")
-def fix_database(db: Session = Depends(get_db)):
-    try:
-        db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS active_income FLOAT DEFAULT 0.0;"))
-        db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS passive_income FLOAT DEFAULT 0.0;"))
-        db.execute(text("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id);"))
-        db.execute(text("ALTER TABLE loans ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id);"))
-        db.commit()
-        return {"message": "Database schema updated."}
-    except Exception as e:
-        db.rollback()
-        return {"error": str(e)}
-
-@app.get("/fix-db-categories")
-def fix_db_categories(db: Session = Depends(get_db)):
-    try:
-        db.execute(text("ALTER TABLE categories ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id);"))
-        db.commit()
-        return {"message": "Added user_id column to categories."}
-    except Exception as e:
-        db.rollback()
-        return {"error": str(e)}
-# ------------------------------------------------------------------
 
 # -------------------- User Income Endpoints --------------------
 @app.get("/user/income", response_model=schemas.User)
@@ -178,7 +148,7 @@ def create_transaction(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_active_user)
 ):
-    db_transaction = models.Transaction(**transaction.dict(), user_id=current_user.id)
+    db_transaction = models.Transaction(**transaction.dict(exclude_none=True), user_id=current_user.id)
     db.add(db_transaction)
     db.commit()
     db.refresh(db_transaction)
@@ -225,6 +195,8 @@ def update_transaction(
     if not transaction:
         raise HTTPException(status_code=404, detail="Transaction not found")
     for key, value in transaction_update.dict().items():
+        if key == "date" and value is None:
+            continue  # keep the existing date rather than nulling it
         setattr(transaction, key, value)
     db.commit()
     db.refresh(transaction)
@@ -249,7 +221,7 @@ def create_loan(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_active_user)
 ):
-    db_loan = models.Loan(**loan.dict(), user_id=current_user.id)
+    db_loan = models.Loan(**loan.dict(exclude_none=True), user_id=current_user.id)
     db.add(db_loan)
     db.commit()
     db.refresh(db_loan)
@@ -281,6 +253,8 @@ def update_loan(
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
     for key, value in loan_update.dict().items():
+        if key == "start_date" and value is None:
+            continue  # keep the existing start date rather than nulling it
         setattr(loan, key, value)
     db.commit()
     db.refresh(loan)

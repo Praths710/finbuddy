@@ -20,4 +20,6 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: PIP_ONLY_BINARY
-        value: ":all:"ss
+        value: ":all:"
+      - key: OPENAI_API_KEY
+        sync: false

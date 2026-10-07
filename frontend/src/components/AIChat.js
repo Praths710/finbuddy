@@ -22,9 +22,9 @@ import {
 } from 'react-icons/fa';
 import axios from 'axios';
 import { useAuth } from '../AuthContext';
+import { API_BASE } from '../config';
 import './AIChat.css';
 
-const API_BASE = 'https://finbuddy-api-python.onrender.com';
 
 const AIChat = ({ onClose }) => {
   const { user } = useAuth();
@@ -179,7 +179,7 @@ const AIChat = ({ onClose }) => {
         <div>
           <FaRobot className="me-2" />
           <strong>FinBuddy AI Assistant</strong>
-          <Badge bg="info" className="ms-2">Powered by GPT-4</Badge>
+          <Badge bg="info" className="ms-2">AI-powered</Badge>
         </div>
         <div>
           <Button

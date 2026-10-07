@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { API_BASE } from './config';
 import { Container, Row, Col, Card, Form, Button, Tabs, Tab, Modal, ProgressBar, Navbar } from 'react-bootstrap';
 import { FaMoneyBillWave, FaCoins, FaCreditCard, FaBalanceScale, FaChartLine, FaSignOutAlt, FaRobot } from 'react-icons/fa';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -145,7 +146,7 @@ const themeStyles = `
   }
 `;
 
-const API_BASE = 'https://finbuddy-api-python.onrender.com'; // your backend URL
+
 
 function Dashboard() {
   const { user, logout } = useAuth();

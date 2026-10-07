@@ -30,7 +30,7 @@ class FinancialAIAgent:
             
             # Call OpenAI
             response = await self.client.chat.completions.create(
-                model="gpt-3.5-turbo",  # or "gpt-4o" if you have access
+                model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
                 messages=[
                     {"role": "system", "content": "You are a friendly, concise financial advisor. Answer the user's question based on their data."},
                     {"role": "user", "content": f"{context}\n\nUser question: {query}"}

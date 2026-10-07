@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
+import { API_BASE } from './config';
 
 const AuthContext = createContext(null);
 
@@ -8,7 +9,6 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
-  const API_BASE = 'https://finbuddy-api-python.onrender.com'; // Your exact backend URL
 
   useEffect(() => {
     if (token) {
