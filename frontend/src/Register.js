@@ -35,7 +35,7 @@ function Register() {
     setBusy(true);
     try {
       await register(email.trim(), password, fullName.trim());
-      navigate('/dashboard');
+      navigate('/home');
     } catch (err) {
       setError(apiError(err, 'Could not create your account.'));
     } finally {

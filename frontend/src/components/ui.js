@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
 
@@ -101,4 +101,51 @@ export function useReveal() {
     return () => io.disconnect();
   }, []);
   return ref;
+}
+
+// Indian digit grouping (1,00,000) for a raw numeric string; keeps any decimals as typed.
+export const groupIN = (raw) => {
+  if (raw === '' || raw == null) return '';
+  const [i, d] = String(raw).split('.');
+  const int = i.replace(/^0+(?=\d)/, '');
+  const grouped = int ? Number(int).toLocaleString('en-IN') : '';
+  return d !== undefined ? `${grouped || '0'}.${d}` : grouped;
+};
+
+// Number field that shows commas while typing. onChange receives { target: { value: '100000.5' } } (no commas),
+// so it drops in wherever a plain <input type="number"> was used.
+export function NumInput({ value, onChange, decimals = 6, ref: outerRef, ...rest }) {
+  const ref = useRef(null);
+  const setRef = (el) => {
+    ref.current = el;
+    if (typeof outerRef === 'function') outerRef(el);
+    else if (outerRef) outerRef.current = el;
+  };
+  const caret = useRef(null); // count of digits/dots left of the caret, restored after formatting
+  const display = groupIN(value);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || caret.current == null || document.activeElement !== el) return;
+    let seen = 0, pos = 0;
+    while (pos < display.length && seen < caret.current) {
+      if (/[\d.]/.test(display[pos])) seen += 1;
+      pos += 1;
+    }
+    el.setSelectionRange(pos, pos);
+    caret.current = null;
+  }, [display]);
+
+  const handle = (e) => {
+    const typed = e.target.value;
+    const left = typed.slice(0, e.target.selectionStart ?? typed.length);
+    caret.current = left.replace(/[^\d.]/g, '').length;
+    let raw = typed.replace(/[^\d.]/g, '');
+    const dot = raw.indexOf('.');
+    if (dot !== -1) raw = raw.slice(0, dot + 1) + raw.slice(dot + 1).replace(/\./g, '').slice(0, decimals);
+    if (raw.split('.')[0].length > 13) return; // keep within safe integer formatting
+    onChange({ target: { value: raw } });
+  };
+
+  return <input {...rest} ref={setRef} type="text" inputMode="decimal" autoComplete="off" value={display} onChange={handle} />;
 }

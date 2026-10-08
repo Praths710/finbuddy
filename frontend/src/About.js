@@ -22,7 +22,7 @@ const FEATURES = [
 
 function About() {
   const { user } = useAuth();
-  const primary = user ? { to: '/dashboard', label: 'Open dashboard' } : { to: '/register', label: 'Start free' };
+  const primary = user ? { to: '/home', label: 'Open dashboard' } : { to: '/register', label: 'Start free' };
   const revealRef = useReveal();
 
   return (

@@ -104,3 +104,66 @@
 .privacy-on .num:hover { filter: blur(9px); }
 .privacy-on .recharts-yAxis .recharts-cartesian-axis-tick-value { filter: blur(6px); }
 .num { transition: filter 0.2s; }
+
+/* ==========================================================================
+   Flow redesign: shared page pieces
+   ========================================================================== */
+.section-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 12px; }
+.section-title h2 { font-size: 26px; margin: 0; font-weight: 500; }
+
+.clickable { cursor: pointer; border-radius: 12px; }
+.clickable:focus-visible, .cat-row:focus-visible { outline: 2px solid rgba(232, 207, 143, 0.5); outline-offset: 2px; }
+
+/* Home */
+.home-hints { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 12px; font-size: 13px; color: var(--muted); }
+.home-hints b { color: var(--text); font-weight: 600; }
+.home-hints .neg b { color: var(--neg); }
+.home-invest { text-align: left; color: var(--text); width: 100%; }
+
+.nudges { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 10px; }
+.nudge {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 12px 12px 14px; border-radius: 14px;
+  background: rgba(255, 255, 255, 0.025); border: 1px solid var(--line);
+  font-size: 14px; line-height: 1.45;
+}
+.nudge .ico { width: 34px; height: 34px; flex: none; border-radius: 10px; display: grid; place-items: center; background: rgba(232, 207, 143, 0.1); color: var(--gold); }
+.nudge.neg { border-color: rgba(241, 154, 143, 0.28); }
+.nudge.neg .ico { background: rgba(241, 154, 143, 0.12); color: var(--neg); }
+.nudge.warn .ico { background: rgba(242, 193, 78, 0.12); color: var(--warn); }
+.nudge.pos .ico { background: rgba(116, 214, 168, 0.12); color: var(--pos); }
+.nudge b { color: var(--text); font-weight: 600; }
+
+/* Category rows (Home + Spending) */
+.cat-row { padding: 10px 10px; margin: 0 -10px; border-radius: 12px; cursor: pointer; transition: background 0.15s; }
+.cat-row + .cat-row { margin-top: 2px; }
+.cat-row:hover { background: rgba(255, 255, 255, 0.03); }
+.cat-row.on { background: rgba(232, 207, 143, 0.07); box-shadow: inset 0 0 0 1px rgba(232, 207, 143, 0.22); }
+.cat-row .sw { width: 9px; height: 9px; border-radius: 3px; flex: none; }
+.cat-bar { position: relative; height: 6px; border-radius: 6px; background: rgba(255, 255, 255, 0.06); }
+.cat-bar > div { height: 100%; border-radius: 6px; transition: width 0.6s cubic-bezier(.2,.8,.2,1); }
+.cat-bar .cap { position: absolute; top: -3px; width: 2px; height: 12px; border-radius: 2px; background: var(--text); opacity: 0.55; transform: translateX(-1px); }
+.cat-set { border: 0; background: transparent; padding: 0 0 0 8px; color: var(--gold); font-size: 12.5px; font-weight: 600; opacity: 0; transition: opacity 0.15s; }
+.cat-row:hover .cat-set, .spend-cats .cat-set { opacity: 1; }
+.spend-cats .cat-set { padding: 4px 0 0; }
+.cat-actions { display: inline-flex; opacity: 0; transition: opacity 0.15s; }
+.cat-actions .fb-icon-btn { width: 26px; height: 26px; }
+.cat-row:hover .cat-actions { opacity: 1; }
+@media (hover: none) { .cat-set, .cat-actions { opacity: 1; } }
+
+/* Spending */
+.summary-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; margin-bottom: 18px; border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: var(--line); }
+.summary-strip > div { background: var(--ink-1); padding: 14px 18px; display: flex; flex-direction: column; gap: 4px; }
+.summary-strip span { font-size: 12.5px; color: var(--muted); }
+.summary-strip b { font-size: 21px; font-weight: 700; }
+.spend-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(280px, 1fr); gap: 16px; }
+.spend-cats { position: sticky; top: 24px; }
+@media (max-width: 992px) {
+  .spend-grid { grid-template-columns: 1fr; }
+  .spend-cats { position: static; order: -1; }
+}
+
+/* First-run setup */
+.setup-steps { display: flex; gap: 6px; }
+.setup-steps span { flex: 1; height: 4px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); }
+.setup-steps span.on { background: var(--grad); }

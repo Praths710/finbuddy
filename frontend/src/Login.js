@@ -28,7 +28,7 @@ function Login() {
     setBusy(true);
     try {
       await login(email.trim(), password);
-      navigate('/dashboard');
+      navigate('/home');
     } catch (err) {
       setError(err.response?.status === 401 ? 'Incorrect email or password.' : apiError(err, 'Sign in failed.'));
     } finally {

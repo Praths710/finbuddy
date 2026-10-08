@@ -4,10 +4,14 @@ import { API_BASE } from './config';
 import { AuthProvider } from './AuthContext';
 import Login from './Login';
 import Register from './Register';
-import Dashboard from './Dashboard';
-import Portfolio from './Portfolio';
 import About from './About';
 import ProtectedRoute from './ProtectedRoute';
+import { FinanceProvider } from './data/FinanceContext';
+import Shell from './components/Shell';
+import Home from './pages/Home';
+import Spending from './pages/Spending';
+import Plan from './pages/Plan';
+import Portfolio from './Portfolio';
 
 function App() {
   // Wake the API the moment anyone opens the site, so it's ready by the time they sign in.
@@ -22,22 +26,15 @@ function App() {
           <Route path="/" element={<About />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/portfolio"
-            element={
-              <ProtectedRoute>
-                <Portfolio />
-              </ProtectedRoute>
-            }
-          />
+          <Route element={<ProtectedRoute><FinanceProvider><Shell /></FinanceProvider></ProtectedRoute>}>
+            <Route path="/home" element={<Home />} />
+            <Route path="/spending" element={<Spending />} />
+            <Route path="/invest" element={<Portfolio />} />
+            <Route path="/plan" element={<Plan />} />
+          </Route>
+          {/* old URLs */}
+          <Route path="/dashboard" element={<Navigate to="/home" replace />} />
+          <Route path="/portfolio" element={<Navigate to="/invest" replace />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </BrowserRouter>
