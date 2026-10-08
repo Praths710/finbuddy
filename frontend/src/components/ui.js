@@ -12,11 +12,14 @@ export function Brand({ to = '/' }) {
 }
 
 export function Splash({ label = 'Loading' }) {
+  // The free server sleeps when idle; explain the wait instead of looking frozen.
+  const slow = useSlowFlag(true, 4000);
   return (
     <div className="fb-splash">
       <div>
         <img src="/FinBuddy-new.png" alt="" />
         <div className="eyebrow mt-3">{label}</div>
+        {slow && <div className="small faint mt-2" style={{ maxWidth: 280 }}>Waking up the server — this can take up to a minute after it's been idle.</div>}
       </div>
     </div>
   );
